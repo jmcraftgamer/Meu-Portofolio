@@ -1,6 +1,5 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const JWT_SECRET = 'portfolio-secret-key-2024';
 
@@ -41,7 +40,7 @@ function auth(req: any, res: any): any {
   catch { return res.status(401).json({ error: 'Invalid token' }); }
 }
 
-function parseBody(req: VercelRequest): Promise<any> {
+function parseBody(req: any): Promise<any> {
   return new Promise(resolve => {
     let body = '';
     req.on('data', (chunk: string) => body += chunk);
@@ -51,7 +50,7 @@ function parseBody(req: VercelRequest): Promise<any> {
 
 const validCategories = ['Mercearia', 'Hortifruit', 'Acougue', 'Padaria', 'Bebidas', 'Biscoitos', 'Higiene', 'Limpeza', 'Utilidades', 'Outros'];
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   res.setHeader('Content-Type', 'application/json');
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const path = url.pathname;
@@ -65,6 +64,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (method === 'OPTIONS') return res.status(200).end();
 
     const body = method !== 'GET' ? await parseBody(req) : {};
+
+    // HEALTH CHECK
+    if (path === '/api/test') {
+      return res.json({ status: 'ok', products: products.length });
+    }
 
     // AUTH
     if (path === '/api/auth/register' && method === 'POST') {
