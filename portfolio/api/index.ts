@@ -1,29 +1,14 @@
-import express from 'express';
-import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const app = express();
 const JWT_SECRET = 'portfolio-secret-key-2024';
 
-app.use(cors());
-app.use(express.json());
-
-type User = { id: number; name: string; email: string; password?: string; googleId?: string; phone?: string; company?: string; isAdmin: number; createdAt: string };
-type Order = { id: number; userId: number; type: string; description: string; name: string; phone: string; company?: string; deliveryTime: string; features: string; status: string; value: number; createdAt: string };
-type Message = { id: number; orderId: number; userId: number; text: string; isAdmin: number; createdAt: string };
-type Product = { id: number; name: string; description?: string; price: number; promo_price?: number | null; category: string; image?: string; is_promotion: number; stock: number; created_at: string };
-
 let nextUserId = 1, nextOrderId = 1, nextMsgId = 1, nextProductId = 1;
-const users: User[] = [];
-const orders: Order[] = [];
-const messages: Message[] = [];
-const products: Product[] = [];
-
-const adminHash = bcrypt.hashSync('45677VDTYT', 10);
-users.push({ id: nextUserId++, name: 'Administrador', email: 'admin@gmail.com', password: adminHash, isAdmin: 1, createdAt: new Date().toISOString() });
-
-const seedProducts: Omit<Product, 'id'>[] = [
+const users: any[] = [{ id: nextUserId++, name: 'Administrador', email: 'admin@gmail.com', password: bcrypt.hashSync('45677VDTYT', 10), isAdmin: 1, createdAt: new Date().toISOString() }];
+const orders: any[] = [];
+const messages: any[] = [];
+const products: any[] = [
   { name: 'Arroz Branco Tipo 1 - 5kg', description: 'Arroz agulhinha tipo 1, graos selecionados', price: 24.90, promo_price: 19.90, category: 'Mercearia', is_promotion: 1, stock: 50, image: '/images/arroz.png', created_at: new Date().toISOString() },
   { name: 'Feijao Carioca - 1kg', description: 'Feijao carioca tipo 1, embalagem 1kg', price: 7.50, promo_price: null, category: 'Mercearia', is_promotion: 0, stock: 80, image: '/images/feijao.png', created_at: new Date().toISOString() },
   { name: 'Oleo de Soja - 900ml', description: 'Oleo de soja refinado, 900ml', price: 6.80, promo_price: 4.99, category: 'Mercearia', is_promotion: 1, stock: 100, image: '/images/oleo-soja.png', created_at: new Date().toISOString() },
@@ -47,185 +32,207 @@ const seedProducts: Omit<Product, 'id'>[] = [
   { name: 'Costela Bovina - 1kg', description: 'Costela bovina para cozido, 1kg', price: 28.90, promo_price: 24.90, category: 'Acougue', is_promotion: 1, stock: 15, image: '/images/costela-bovina.png', created_at: new Date().toISOString() },
   { name: 'Linguica Calabresa - 500g', description: 'Linguica calabresa defumada, 500g', price: 14.90, promo_price: null, category: 'Acougue', is_promotion: 0, stock: 40, image: '/images/linguica-calabresa.png', created_at: new Date().toISOString() },
 ];
-for (const p of seedProducts) { products.push({ id: nextProductId++, ...p }); }
+for (const p of products) { p.id = nextProductId++; }
 
-function auth(req: any, res: any, next: any) {
+function auth(req: any, res: any): any {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Token required' });
-  try { req.user = jwt.verify(token, JWT_SECRET); next(); }
-  catch { res.status(401).json({ error: 'Invalid token' }); }
+  try { return jwt.verify(token, JWT_SECRET); }
+  catch { return res.status(401).json({ error: 'Invalid token' }); }
 }
 
-function adminAuth(req: any, res: any, next: any) {
-  auth(req, res, () => { if (!req.user.isAdmin) return res.status(403).json({ error: 'Admin only' }); next(); });
+function parseBody(req: VercelRequest): Promise<any> {
+  return new Promise(resolve => {
+    let body = '';
+    req.on('data', (chunk: string) => body += chunk);
+    req.on('end', () => { try { resolve(JSON.parse(body)); } catch { resolve({}); } });
+  });
 }
-
-app.post('/api/auth/register', (req: any, res) => {
-  const { name, email, password, phone, company } = req.body;
-  try {
-    if (users.find(u => u.email === email)) return res.status(400).json({ error: 'Email já cadastrado' });
-    const hashedPassword = bcrypt.hashSync(password, 10);
-    const isAdmin = email.toLowerCase() === 'admin@gmail.com' ? 1 : 0;
-    const user: User = { id: nextUserId++, name, email, password: hashedPassword, phone: phone || '', company: company || '', isAdmin, createdAt: new Date().toISOString() };
-    users.push(user);
-    const token = jwt.sign({ id: user.id, email: user.email, name: user.name, isAdmin: user.isAdmin }, JWT_SECRET);
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, isAdmin: !!user.isAdmin } });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
-});
-
-app.post('/api/auth/login', (req: any, res) => {
-  const { email, password } = req.body;
-  const user = users.find(u => u.email === email);
-  if (!user || !user.password) return res.status(400).json({ error: 'Credenciais inválidas' });
-  if (!bcrypt.compareSync(password, user.password)) return res.status(400).json({ error: 'Credenciais inválidas' });
-  const token = jwt.sign({ id: user.id, email: user.email, name: user.name, isAdmin: user.isAdmin }, JWT_SECRET);
-  res.json({ token, user: { id: user.id, name: user.name, email: user.email, isAdmin: !!user.isAdmin } });
-});
-
-app.post('/api/auth/google', (req: any, res) => {
-  const { email, name, googleId } = req.body;
-  try {
-    let user = users.find(u => u.email === email);
-    if (!user) {
-      const isAdmin = email.toLowerCase() === 'admin@gmail.com' ? 1 : 0;
-      user = { id: nextUserId++, name, email, googleId, isAdmin, createdAt: new Date().toISOString() };
-      users.push(user);
-    }
-    const token = jwt.sign({ id: user.id, email: user.email, name: user.name, isAdmin: user.isAdmin }, JWT_SECRET);
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, isAdmin: !!user.isAdmin } });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
-});
-
-app.get('/api/auth/me', auth, (req: any, res) => {
-  const user = users.find(u => u.id === req.user.id);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json({ id: user.id, name: user.name, email: user.email, phone: user.phone, company: user.company, isAdmin: user.isAdmin });
-});
-
-app.post('/api/orders', auth, (req: any, res) => {
-  const { type, description, name, phone, company, deliveryTime, features } = req.body;
-  const values: Record<string, number> = { site: 450, app_mobile: 650, app_desktop: 1200 };
-  const value = values[type] || 0;
-  const order: Order = { id: nextOrderId++, userId: req.user.id, type, description, name, phone, company: company || '', deliveryTime, features: JSON.stringify(features || []), value, status: 'pending', createdAt: new Date().toISOString() };
-  orders.push(order);
-  res.json(order);
-});
-
-app.get('/api/orders', auth, (req: any, res) => {
-  const userOrders = orders.filter(o => o.userId === req.user.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  res.json(userOrders);
-});
-
-app.get('/api/orders/:id', auth, (req: any, res) => {
-  const order = orders.find(o => o.id === Number(req.params.id));
-  if (!order) return res.status(404).json({ error: 'Pedido não encontrado' });
-  res.json(order);
-});
 
 const validCategories = ['Mercearia', 'Hortifruit', 'Acougue', 'Padaria', 'Bebidas', 'Biscoitos', 'Higiene', 'Limpeza', 'Utilidades', 'Outros'];
 
-app.get('/api/products', (_req: any, res) => {
-  res.json([...products].reverse());
-});
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Content-Type', 'application/json');
+  const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+  const path = url.pathname;
+  const method = req.method || 'GET';
 
-app.get('/api/products/promotions', (_req: any, res) => {
-  res.json(products.filter(p => p.is_promotion === 1).reverse());
-});
+  try {
+    // CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+    if (method === 'OPTIONS') return res.status(200).end();
 
-app.get('/api/products/category/:category', (req: any, res) => {
-  const { category } = req.params;
-  if (!validCategories.includes(category)) return res.status(400).json({ error: 'Categoria invalida' });
-  res.json(products.filter(p => p.category === category).reverse());
-});
+    const body = method !== 'GET' ? await parseBody(req) : {};
 
-app.get('/api/products/:id', (req: any, res) => {
-  const product = products.find(p => p.id === Number(req.params.id));
-  if (!product) return res.status(404).json({ error: 'Produto nao encontrado' });
-  res.json(product);
-});
+    // AUTH
+    if (path === '/api/auth/register' && method === 'POST') {
+      if (users.find(u => u.email === body.email)) return res.status(400).json({ error: 'Email já cadastrado' });
+      const hashedPassword = bcrypt.hashSync(body.password, 10);
+      const isAdmin = (body.email || '').toLowerCase() === 'admin@gmail.com' ? 1 : 0;
+      const user = { id: nextUserId++, name: body.name, email: body.email, password: hashedPassword, phone: body.phone || '', company: body.company || '', isAdmin, createdAt: new Date().toISOString() };
+      users.push(user);
+      const token = jwt.sign({ id: user.id, email: user.email, name: user.name, isAdmin: user.isAdmin }, JWT_SECRET);
+      return res.json({ token, user: { id: user.id, name: user.name, email: user.email, isAdmin: !!user.isAdmin } });
+    }
 
-app.post('/api/products', adminAuth, (req: any, res) => {
-  const { name, description, price, promo_price, category, image, is_promotion, stock } = req.body;
-  if (!name || !price || !category) return res.status(400).json({ error: 'Nome, preco e categoria sao obrigatorios' });
-  const product: Product = { id: nextProductId++, name, description: description || '', price, promo_price: promo_price || null, category, image: image || '', is_promotion: is_promotion ? 1 : 0, stock: stock || 0, created_at: new Date().toISOString() };
-  products.push(product);
-  res.status(201).json(product);
-});
+    if (path === '/api/auth/login' && method === 'POST') {
+      const user = users.find(u => u.email === body.email);
+      if (!user || !user.password) return res.status(400).json({ error: 'Credenciais inválidas' });
+      if (!bcrypt.compareSync(body.password, user.password)) return res.status(400).json({ error: 'Credenciais inválidas' });
+      const token = jwt.sign({ id: user.id, email: user.email, name: user.name, isAdmin: user.isAdmin }, JWT_SECRET);
+      return res.json({ token, user: { id: user.id, name: user.name, email: user.email, isAdmin: !!user.isAdmin } });
+    }
 
-app.put('/api/products/:id', adminAuth, (req: any, res) => {
-  const existing = products.find(p => p.id === Number(req.params.id));
-  if (!existing) return res.status(404).json({ error: 'Produto nao encontrado' });
-  const { name, description, price, promo_price, category, image, is_promotion, stock } = req.body;
-  Object.assign(existing, {
-    name: name ?? existing.name,
-    description: description !== undefined ? description : existing.description,
-    price: price ?? existing.price,
-    promo_price: promo_price !== undefined ? promo_price : existing.promo_price,
-    category: category ?? existing.category,
-    image: image !== undefined ? image : existing.image,
-    is_promotion: is_promotion !== undefined ? (is_promotion ? 1 : 0) : existing.is_promotion,
-    stock: stock !== undefined ? stock : existing.stock,
-  });
-  res.json(existing);
-});
+    if (path === '/api/auth/google' && method === 'POST') {
+      let user = users.find(u => u.email === body.email);
+      if (!user) {
+        user = { id: nextUserId++, name: body.name, email: body.email, googleId: body.googleId, isAdmin: 0, createdAt: new Date().toISOString() };
+        users.push(user);
+      }
+      const token = jwt.sign({ id: user.id, email: user.email, name: user.name, isAdmin: user.isAdmin }, JWT_SECRET);
+      return res.json({ token, user: { id: user.id, name: user.name, email: user.email, isAdmin: !!user.isAdmin } });
+    }
 
-app.delete('/api/products/:id', adminAuth, (req: any, res) => {
-  const idx = products.findIndex(p => p.id === Number(req.params.id));
-  if (idx === -1) return res.status(404).json({ error: 'Produto nao encontrado' });
-  products.splice(idx, 1);
-  res.json({ message: 'Produto removido com sucesso' });
-});
+    if (path === '/api/auth/me') {
+      const userData = auth(req, res);
+      if (!userData || userData.error) return;
+      const user = users.find(u => u.id === userData.id);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      return res.json({ id: user.id, name: user.name, email: user.email, phone: user.phone, company: user.company, isAdmin: user.isAdmin });
+    }
 
-app.get('/api/admin/orders', adminAuth, (_req: any, res) => {
-  const adminOrders = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(o => {
-    const u = users.find(user => user.id === o.userId);
-    return { ...o, userName: u?.name || '', userEmail: u?.email || '', userPhone: u?.phone || '' };
-  });
-  res.json(adminOrders);
-});
+    // ORDERS
+    if (path === '/api/orders') {
+      const userData = auth(req, res);
+      if (!userData || userData.error) return;
+      if (method === 'POST') {
+        const values: Record<string, number> = { site: 450, app_mobile: 650, app_desktop: 1200 };
+        const order = { id: nextOrderId++, userId: userData.id, type: body.type, description: body.description, name: body.name, phone: body.phone, company: body.company || '', deliveryTime: body.deliveryTime, features: JSON.stringify(body.features || []), value: values[body.type] || 0, status: 'pending', createdAt: new Date().toISOString() };
+        orders.push(order);
+        return res.json(order);
+      }
+      if (method === 'GET') {
+        const userOrders = orders.filter(o => o.userId === userData.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        return res.json(userOrders);
+      }
+    }
 
-app.put('/api/admin/orders/:id/status', adminAuth, (req: any, res) => {
-  const order = orders.find(o => o.id === Number(req.params.id));
-  if (!order) return res.status(404).json({ error: 'Pedido nao encontrado' });
-  order.status = req.body.status;
-  res.json(order);
-});
+    if (path.startsWith('/api/chat/') && method === 'GET') {
+      const userData = auth(req, res);
+      if (!userData || userData.error) return;
+      const orderId = parseInt(path.split('/')[3]);
+      const order = orders.find(o => o.id === orderId);
+      if (!order) return res.status(404).json({ error: 'Pedido não encontrado' });
+      if (order.userId !== userData.id && !userData.isAdmin) return res.status(403).json({ error: 'Acesso negado' });
+      return res.json(messages.filter(m => m.orderId === orderId).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()));
+    }
 
-app.get('/api/admin/stats', adminAuth, (_req: any, res) => {
-  const totalOrders = orders.length;
-  const totalRevenue = orders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + o.value, 0);
-  const pendingOrders = orders.filter(o => o.status === 'pending').length;
-  const completedOrders = orders.filter(o => o.status === 'completed').length;
-  const inProgressOrders = orders.filter(o => o.status === 'in_progress').length;
-  const ordersByMonth = Array.from({ length: 12 }, (_, i) => {
-    const month = String(i + 1).padStart(2, '0');
-    const monthOrders = orders.filter(o => o.createdAt?.startsWith(`202${i >= new Date().getMonth() ? 4 : 5}-${month}`) || o.createdAt?.includes(`-${month}-`));
-    return { month, count: monthOrders.length, revenue: monthOrders.reduce((s, o) => s + o.value, 0) };
-  }).filter(m => m.count > 0 || m.revenue > 0);
-  const ordersByType = [...new Set(orders.map(o => o.type))].map(type => {
-    const typeOrders = orders.filter(o => o.type === type);
-    return { type, count: typeOrders.length, revenue: typeOrders.reduce((s, o) => s + o.value, 0) };
-  });
-  res.json({ totalOrders, totalRevenue, pendingOrders, completedOrders, inProgressOrders, ordersByMonth, ordersByType });
-});
+    if (path.startsWith('/api/chat/') && method === 'POST') {
+      const userData = auth(req, res);
+      if (!userData || userData.error) return;
+      const orderId = parseInt(path.split('/')[3]);
+      const order = orders.find(o => o.id === orderId);
+      if (!order) return res.status(404).json({ error: 'Pedido não encontrado' });
+      if (order.userId !== userData.id && !userData.isAdmin) return res.status(403).json({ error: 'Acesso negado' });
+      messages.push({ id: nextMsgId++, orderId, userId: userData.id, text: body.text, isAdmin: userData.isAdmin ? 1 : 0, createdAt: new Date().toISOString() });
+      return res.json(messages.filter(m => m.orderId === orderId).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()));
+    }
 
-app.get('/api/chat/:orderId', auth, (req: any, res) => {
-  const order = orders.find(o => o.id === Number(req.params.orderId));
-  if (!order) return res.status(404).json({ error: 'Pedido não encontrado' });
-  if (order.userId !== req.user.id && !req.user.isAdmin) return res.status(403).json({ error: 'Acesso negado' });
-  const chatMessages = messages.filter(m => m.orderId === Number(req.params.orderId)).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  res.json(chatMessages);
-});
+    // PRODUCTS
+    if (path === '/api/products' && method === 'GET') {
+      return res.json([...products].reverse());
+    }
 
-app.post('/api/chat/:orderId', auth, (req: any, res) => {
-  const { text } = req.body;
-  const order = orders.find(o => o.id === Number(req.params.orderId));
-  if (!order) return res.status(404).json({ error: 'Pedido não encontrado' });
-  if (order.userId !== req.user.id && !req.user.isAdmin) return res.status(403).json({ error: 'Acesso negado' });
-  const isAdmin = req.user.isAdmin ? 1 : 0;
-  messages.push({ id: nextMsgId++, orderId: Number(req.params.orderId), userId: req.user.id, text, isAdmin, createdAt: new Date().toISOString() });
-  const chatMessages = messages.filter(m => m.orderId === Number(req.params.orderId)).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  res.json(chatMessages);
-});
+    if (path === '/api/products/promotions' && method === 'GET') {
+      return res.json(products.filter(p => p.is_promotion === 1).reverse());
+    }
 
-export default app;
+    const categoryMatch = path.match(/^\/api\/products\/category\/(.+)$/);
+    if (categoryMatch && method === 'GET') {
+      const cat = decodeURIComponent(categoryMatch[1]);
+      if (!validCategories.includes(cat)) return res.status(400).json({ error: 'Categoria invalida' });
+      return res.json(products.filter(p => p.category === cat).reverse());
+    }
+
+    const productIdMatch = path.match(/^\/api\/products\/(\d+)$/);
+    if (productIdMatch && method === 'GET') {
+      const product = products.find(p => p.id === parseInt(productIdMatch[1]));
+      if (!product) return res.status(404).json({ error: 'Produto nao encontrado' });
+      return res.json(product);
+    }
+
+    if (path === '/api/products' && method === 'POST') {
+      const userData = auth(req, res);
+      if (!userData || userData.error) return;
+      if (!userData.isAdmin) return res.status(403).json({ error: 'Admin only' });
+      if (!body.name || !body.price || !body.category) return res.status(400).json({ error: 'Nome, preco e categoria sao obrigatorios' });
+      const product = { id: nextProductId++, name: body.name, description: body.description || '', price: body.price, promo_price: body.promo_price || null, category: body.category, image: body.image || '', is_promotion: body.is_promotion ? 1 : 0, stock: body.stock || 0, created_at: new Date().toISOString() };
+      products.push(product);
+      return res.status(201).json(product);
+    }
+
+    const putMatch = path.match(/^\/api\/products\/(\d+)$/);
+    if (putMatch && method === 'PUT') {
+      const userData = auth(req, res);
+      if (!userData || userData.error) return;
+      if (!userData.isAdmin) return res.status(403).json({ error: 'Admin only' });
+      const existing = products.find(p => p.id === parseInt(putMatch[1]));
+      if (!existing) return res.status(404).json({ error: 'Produto nao encontrado' });
+      Object.assign(existing, { name: body.name ?? existing.name, description: body.description !== undefined ? body.description : existing.description, price: body.price ?? existing.price, promo_price: body.promo_price !== undefined ? body.promo_price : existing.promo_price, category: body.category ?? existing.category, image: body.image !== undefined ? body.image : existing.image, is_promotion: body.is_promotion !== undefined ? (body.is_promotion ? 1 : 0) : existing.is_promotion, stock: body.stock !== undefined ? body.stock : existing.stock });
+      return res.json(existing);
+    }
+
+    const deleteMatch = path.match(/^\/api\/products\/(\d+)$/);
+    if (deleteMatch && method === 'DELETE') {
+      const userData = auth(req, res);
+      if (!userData || userData.error) return;
+      if (!userData.isAdmin) return res.status(403).json({ error: 'Admin only' });
+      const idx = products.findIndex(p => p.id === parseInt(deleteMatch[1]));
+      if (idx === -1) return res.status(404).json({ error: 'Produto nao encontrado' });
+      products.splice(idx, 1);
+      return res.json({ message: 'Produto removido com sucesso' });
+    }
+
+    // ADMIN
+    if (path === '/api/admin/orders') {
+      const userData = auth(req, res);
+      if (!userData || userData.error) return;
+      if (!userData.isAdmin) return res.status(403).json({ error: 'Admin only' });
+      const adminOrders = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(o => {
+        const u = users.find(user => user.id === o.userId);
+        return { ...o, userName: u?.name || '', userEmail: u?.email || '', userPhone: u?.phone || '' };
+      });
+      return res.json(adminOrders);
+    }
+
+    const statusMatch = path.match(/^\/api\/admin\/orders\/(\d+)\/status$/);
+    if (statusMatch && method === 'PUT') {
+      const userData = auth(req, res);
+      if (!userData || userData.error) return;
+      if (!userData.isAdmin) return res.status(403).json({ error: 'Admin only' });
+      const order = orders.find(o => o.id === parseInt(statusMatch[1]));
+      if (!order) return res.status(404).json({ error: 'Pedido nao encontrado' });
+      order.status = body.status;
+      return res.json(order);
+    }
+
+    if (path === '/api/admin/stats') {
+      const userData = auth(req, res);
+      if (!userData || userData.error) return;
+      if (!userData.isAdmin) return res.status(403).json({ error: 'Admin only' });
+      const totalOrders = orders.length;
+      const totalRevenue = orders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + o.value, 0);
+      const pendingOrders = orders.filter(o => o.status === 'pending').length;
+      const completedOrders = orders.filter(o => o.status === 'completed').length;
+      const inProgressOrders = orders.filter(o => o.status === 'in_progress').length;
+      const ordersByType = [...new Set(orders.map(o => o.type))].map(type => ({ type, count: orders.filter(o => o.type === type).length, revenue: orders.filter(o => o.type === type).reduce((s, o) => s + o.value, 0) }));
+      return res.json({ totalOrders, totalRevenue, pendingOrders, completedOrders, inProgressOrders, ordersByMonth: [], ordersByType });
+    }
+
+    return res.status(404).json({ error: 'Rota não encontrada' });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message || 'Erro interno' });
+  }
+}
