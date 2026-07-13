@@ -1,22 +1,6 @@
 const API = '/api';
 
-function waitForSW() {
-  return new Promise<void>((resolve) => {
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      resolve();
-    } else if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('controllerchange', () => resolve(), { once: true });
-      setTimeout(resolve, 2000);
-    } else {
-      resolve();
-    }
-  });
-}
-
-const swReady = waitForSW();
-
 async function request(path: string, options: RequestInit = {}) {
-  await swReady;
   const token = localStorage.getItem('token');
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
