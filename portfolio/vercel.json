@@ -1,9 +1,5 @@
 {
-  "functions": {
-    "api/index.cjs": { "runtime": "@vercel/node@3" }
-  },
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.cjs?__path=/api/$1" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
