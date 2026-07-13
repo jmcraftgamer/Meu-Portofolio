@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BurgeMax - O Sabor que Conquista</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --orange: #FF6B00;
+      --orange-dark: #E05E00;
+      --orange-light: #FF8533;
+      --orange-glow: #FF8C00;
+      --bg: #0D0D0D;
+      --bg-card: #1A1A1A;
+      --bg-card-hover: #222;
+      --text: #FFFFFF;
+      --text-muted: #888;
+      --gold: #FFD700;
+      --radius: 16px;
+      --shadow: 0 8px 32px rgba(0,0,0,.5);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #111; }
+    ::-webkit-scrollbar-thumb { background: var(--orange); border-radius: 4px; }
+
+    /* ===== NAV ===== */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      padding: 16px 40px;
+      display: flex; align-items: center; justify-content: space-between;
+      transition: .3s;
+      background: transparent;
+    }
+    nav.scrolled {
+      background: rgba(13,13,13,.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255,107,0,.15);
+    }
+    .logo {
+      font-size: 28px; font-weight: 900;
+      background: linear-gradient(135deg, var(--orange), var(--gold));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .logo i { -webkit-text-fill-color: var(--orange); font-size: 30px; }
+    .nav-links { display: flex; align-items: center; gap: 32px; list-style: none; }
+    .nav-links a {
+      color: var(--text); text-decoration: none; font-size: 15px; font-weight: 500;
+      position: relative; transition: .3s;
+    }
+    .nav-links a::after {
+      content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 2px;
+      background: var(--orange); transition: .3s;
+    }
+    .nav-links a:hover { color: var(--orange); }
+    .nav-links a:hover::after { width: 100%; }
+    .nav-cta {
+      background: var(--orange); color: #fff !important; padding: 10px 24px;
+      border-radius: 50px; font-weight: 700 !important;
+    }
+    .nav-cta:hover { background: var(--orange-dark) !important; transform: scale(1.05); }
+    .nav-cta::after { display: none !important; }
+    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; background: none; border: none; padding: 5px; }
+    .hamburger span { width: 28px; height: 3px; background: var(--text); border-radius: 3px; transition: .3s; }
+
+    /* ===== HERO ===== */
+    .hero {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      background: linear-gradient(135deg, #0D0D0D 0%, #1A0A00 50%, #0D0D0D 100%);
+      overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(255,107,0,.15) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 30%, rgba(255,215,0,.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 80%, rgba(255,107,0,.1) 0%, transparent 50%);
+    }
+    .hero-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 60px;
+      align-items: center; max-width: 1200px; width: 100%; padding: 120px 40px 60px;
+      position: relative; z-index: 1;
+    }
+    .hero-content h1 {
+      font-size: 64px; font-weight: 900; line-height: 1.1;
+      background: linear-gradient(135deg, var(--orange) 0%, var(--gold) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 8px; animation: fadeUp .8s ease;
+    }
+    .hero-content .sub-brand {
+      font-size: 18px; color: var(--text-muted); letter-spacing: 6px; text-transform: uppercase;
+      margin-bottom: 16px; font-weight: 600;
+    }
+    .hero-content .tagline {
+      font-size: 20px; color: #ccc; line-height: 1.6; margin-bottom: 32px; max-width: 500px;
+    }
+    .hero-btns { display: flex; gap: 16px; flex-wrap: wrap; }
+    .btn {
+      padding: 14px 36px; border-radius: 50px; font-weight: 700; font-size: 16px;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
+      transition: .3s; cursor: pointer; border: none; font-family: inherit;
+    }
+    .btn-primary {
+      background: var(--orange); color: #fff; box-shadow: 0 4px 20px rgba(255,107,0,.4);
+    }
+    .btn-primary:hover { background: var(--orange-dark); transform: translateY(-2px); box-shadow: 0 8px 30px rgba(255,107,0,.5); }
+    .btn-outline {
+      background: transparent; color: var(--text); border: 2px solid rgba(255,255,255,.2);
+    }
+    .btn-outline:hover { border-color: var(--orange); color: var(--orange); }
+    .hero-image {
+      position: relative; display: flex; justify-content: center; align-items: center;
+    }
+    .hero-img-main {
+      width: 100%; max-width: 550px; border-radius: 24px;
+      animation: float 4s ease-in-out infinite;
+      filter: drop-shadow(0 20px 60px rgba(255,107,0,.3));
+    }
+    .hero-badge {
+      position: absolute; top: 10%; right: 5%;
+      background: var(--orange); color: #fff; padding: 10px 18px; border-radius: 50px;
+      font-weight: 800; font-size: 14px; animation: pulse 2s infinite;
+      box-shadow: 0 4px 20px rgba(255,107,0,.5);
+    }
+    .hero-badge i { margin-right: 6px; }
+
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+    /* ===== SECTION HEADERS ===== */
+    .section {
+      padding: 100px 40px;
+      max-width: 1200px; margin: 0 auto;
+    }
+    .section-header {
+      text-align: center; margin-bottom: 60px;
+    }
+    .section-header h2 {
+      font-size: 42px; font-weight: 800;
+      background: linear-gradient(135deg, var(--orange), var(--gold));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      display: inline-block;
+    }
+    .section-header p { color: var(--text-muted); font-size: 17px; margin-top: 12px; }
+
+    /* ===== BEST SELLERS ===== */
+    .bestsellers-bg { background: linear-gradient(180deg, var(--bg) 0%, #150A00 100%); }
+    .bestsellers-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 30px;
+    }
+    .bs-card {
+      background: linear-gradient(145deg, #1F1F1F, #2A2A2A);
+      border-radius: var(--radius); overflow: hidden; text-align: center;
+      padding-bottom: 24px; position: relative;
+      transition: .4s; border: 1px solid rgba(255,107,0,.1);
+    }
+    .bs-card:hover { transform: translateY(-8px); border-color: var(--orange); box-shadow: 0 20px 50px rgba(255,107,0,.2); }
+    .bs-badge {
+      position: absolute; top: 12px; left: 12px; z-index: 2;
+      background: linear-gradient(135deg, var(--orange), var(--gold));
+      color: #fff; font-size: 12px; font-weight: 800; padding: 6px 14px; border-radius: 50px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .bs-img { width: 100%; height: 220px; object-fit: cover; }
+    .bs-card h3 { font-size: 20px; margin: 16px 0 6px; }
+    .bs-card .desc { color: var(--text-muted); font-size: 13px; padding: 0 16px; margin-bottom: 12px; }
+    .bs-card .price { font-size: 24px; font-weight: 800; color: var(--orange); }
+    .bs-card .btn { margin-top: 12px; }
+
+    /* ===== MENU / CARDÁPIO ===== */
+    .menu-tabs {
+      display: flex; justify-content: center; gap: 12px; margin-bottom: 40px; flex-wrap: wrap;
+    }
+    .menu-tab {
+      padding: 10px 28px; border-radius: 50px; background: #1A1A1A; color: var(--text-muted);
+      border: 1px solid #2A2A2A; cursor: pointer; font-weight: 600; transition: .3s; font-family: inherit; font-size: 15px;
+    }
+    .menu-tab:hover { border-color: var(--orange); color: var(--orange); }
+    .menu-tab.active { background: var(--orange); color: #fff; border-color: var(--orange); }
+    .menu-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(270px,1fr)); gap: 24px;
+    }
+    .menu-item {
+      background: var(--bg-card); border-radius: var(--radius); overflow: hidden;
+      transition: .4s; border: 1px solid #222;
+    }
+    .menu-item:hover { transform: translateY(-6px); border-color: var(--orange); box-shadow: 0 12px 40px rgba(255,107,0,.15); }
+    .menu-item-img { width: 100%; height: 200px; object-fit: cover; display: block; }
+    .menu-item-body { padding: 18px; }
+    .menu-item-body h3 { font-size: 18px; margin-bottom: 4px; }
+    .menu-item-body .desc { color: var(--text-muted); font-size: 13px; margin-bottom: 12px; line-height: 1.5; }
+    .menu-item-footer {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .menu-item-footer .price { font-size: 22px; font-weight: 800; color: var(--orange); }
+    .btn-buy {
+      background: var(--orange); color: #fff; border: none; padding: 8px 20px;
+      border-radius: 50px; font-weight: 700; font-size: 14px; cursor: pointer;
+      transition: .3s; font-family: inherit; display: flex; align-items: center; gap: 8px;
+    }
+    .btn-buy:hover { background: var(--orange-dark); transform: scale(1.05); }
+
+    /* ===== CHAT MODAL ===== */
+    .chat-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.7); backdrop-filter: blur(4px);
+      z-index: 2000; display: none; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .chat-overlay.open { display: flex; }
+    .chat-modal {
+      background: #111; border-radius: 20px; width: 100%; max-width: 440px; height: 600px;
+      display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.8);
+      animation: zoomIn .3s ease;
+    }
+    @keyframes zoomIn { from { opacity: 0; transform: scale(.8); } to { opacity: 1; transform: scale(1); } }
+    .chat-header {
+      background: #075E54; padding: 14px 18px; display: flex; align-items: center; gap: 12px;
+    }
+    .chat-header img {
+      width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #fff;
+    }
+    .chat-header .info { flex: 1; }
+    .chat-header .info h4 { font-size: 16px; }
+    .chat-header .info span { font-size: 12px; color: #7FEFB4; }
+    .chat-close {
+      background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; padding: 4px;
+    }
+    .chat-body {
+      flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+      background: #0A0A0A;
+    }
+    .chat-msg {
+      max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5;
+      animation: msgIn .3s ease;
+    }
+    @keyframes msgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .chat-msg.customer {
+      align-self: flex-end; background: #075E54; color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .chat-msg.attendant {
+      align-self: flex-start; background: #1F2C33; color: #E9EDEF;
+      border-bottom-left-radius: 4px;
+    }
+    .chat-msg .time { font-size: 11px; color: rgba(255,255,255,.5); margin-top: 4px; display: block; text-align: right; }
+    .chat-msg.attendant .time { text-align: left; }
+    .chat-footer {
+      background: #1A1A1A; padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+    }
+    .chat-footer input {
+      flex: 1; background: #2A2A2A; border: none; border-radius: 24px; padding: 12px 16px;
+      color: #fff; font-family: inherit; font-size: 14px; outline: none;
+    }
+    .chat-footer input::placeholder { color: #666; }
+    .chat-footer button {
+      background: var(--orange); border: none; color: #fff; width: 44px; height: 44px;
+      border-radius: 50%; cursor: pointer; font-size: 18px; transition: .3s;
+    }
+    .chat-footer button:hover { background: var(--orange-dark); }
+    .chat-footer .attach { background: none; color: #888; }
+
+    /* ===== CONTENT FEED ===== */
+    .feed-bg { background: #0A0A0A; }
+    .stories {
+      display: flex; gap: 16px; margin-bottom: 40px; overflow-x: auto; padding-bottom: 12px;
+    }
+    .stories::-webkit-scrollbar { height: 4px; }
+    .stories::-webkit-scrollbar-thumb { background: var(--orange); }
+    .story {
+      display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;
+      flex-shrink: 0;
+    }
+    .story-ring {
+      width: 72px; height: 72px; border-radius: 50%; padding: 3px;
+      background: linear-gradient(135deg, var(--orange), var(--gold));
+      display: flex; align-items: center; justify-content: center;
+    }
+    .story-ring img {
+      width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 2px solid #0A0A0A;
+    }
+    .story span { font-size: 12px; color: var(--text-muted); max-width: 72px; text-align: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .feed-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 20px;
+    }
+    .feed-post {
+      background: var(--bg-card); border-radius: var(--radius); overflow: hidden; border: 1px solid #222;
+      transition: .3s;
+    }
+    .feed-post:hover { transform: translateY(-4px); border-color: var(--orange); }
+    .feed-post-img { width: 100%; height: 280px; object-fit: cover; display: block; }
+    .feed-post-body { padding: 14px 16px; }
+    .feed-post-body .post-header {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    }
+    .feed-post-body .post-header img {
+      width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
+    }
+    .feed-post-body .post-header strong { font-size: 14px; }
+    .feed-post-body p { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+    .feed-post-actions {
+      display: flex; gap: 16px; margin-top: 10px; color: var(--text-muted); font-size: 18px;
+    }
+    .feed-post-actions i { cursor: pointer; transition: .3s; }
+    .feed-post-actions i:hover { color: var(--orange); }
+
+    /* ===== FEEDBACKS / AVALIAÇÕES ===== */
+    .feedback-summary {
+      display: flex; align-items: center; justify-content: center; gap: 24px;
+      margin-bottom: 40px; flex-wrap: wrap; text-align: center;
+    }
+    .feedback-summary .big-rate { font-size: 56px; font-weight: 900; color: var(--orange); line-height: 1; }
+    .feedback-summary .stars { color: var(--gold); font-size: 22px; }
+    .feedback-summary p { color: var(--text-muted); font-size: 15px; }
+    .feedbacks-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(320px,1fr)); gap: 24px;
+    }
+    .fb-card {
+      background: var(--bg-card); border-radius: var(--radius); padding: 24px;
+      border: 1px solid #222; transition: .4s;
+    }
+    .fb-card:hover { border-color: var(--orange); transform: translateY(-4px); }
+    .fb-card .fb-header {
+      display: flex; align-items: center; gap: 14px; margin-bottom: 14px;
+    }
+    .fb-card .fb-header img {
+      width: 48px; height: 48px; border-radius: 50%; object-fit: cover;
+    }
+    .fb-card .fb-header .info { flex: 1; }
+    .fb-card .fb-header .info h4 { font-size: 16px; }
+    .fb-card .fb-header .info .stars { color: var(--gold); font-size: 14px; }
+    .fb-card .fb-text { font-size: 14px; color: #ccc; line-height: 1.6; margin-bottom: 14px; }
+    .fb-card .fb-img { width: 100%; height: 180px; object-fit: cover; border-radius: 10px; }
+
+    /* ===== FEEDBACK FORM ===== */
+    .feedback-form {
+      max-width: 700px; margin: 60px auto 0; background: var(--bg-card);
+      border-radius: var(--radius); padding: 40px; border: 1px solid #222;
+    }
+    .feedback-form h3 { font-size: 24px; margin-bottom: 24px; text-align: center; }
+    .feedback-form .form-group { margin-bottom: 18px; }
+    .feedback-form label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; }
+    .feedback-form input,
+    .feedback-form textarea,
+    .feedback-form select {
+      width: 100%; background: #2A2A2A; border: 1px solid #333; border-radius: 10px;
+      padding: 14px 16px; color: #fff; font-family: inherit; font-size: 14px; outline: none; transition: .3s;
+    }
+    .feedback-form input:focus,
+    .feedback-form textarea:focus { border-color: var(--orange); }
+    .feedback-form textarea { min-height: 100px; resize: vertical; }
+    .feedback-form .file-upload {
+      border: 2px dashed #444; border-radius: 10px; padding: 30px; text-align: center;
+      cursor: pointer; transition: .3s; color: var(--text-muted);
+    }
+    .feedback-form .file-upload:hover { border-color: var(--orange); color: var(--orange); }
+    .feedback-form .file-upload i { font-size: 32px; margin-bottom: 8px; display: block; }
+    .star-input { display: flex; gap: 6px; font-size: 28px; cursor: pointer; }
+    .star-input i { color: #444; transition: .3s; }
+    .star-input i.active { color: var(--gold); }
+    .star-input i:hover { color: var(--gold); }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: #080808; padding: 60px 40px 30px; border-top: 1px solid #1A1A1A;
+    }
+    .footer-grid {
+      max-width: 1200px; margin: 0 auto; display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 40px;
+    }
+    .footer-grid h4 { font-size: 18px; margin-bottom: 16px; }
+    .footer-grid p, .footer-grid a { color: var(--text-muted); font-size: 14px; text-decoration: none; display: block; margin-bottom: 8px; }
+    .footer-grid a:hover { color: var(--orange); }
+    .footer-bottom {
+      max-width: 1200px; margin: 40px auto 0; padding-top: 20px;
+      border-top: 1px solid #1A1A1A; text-align: center; color: var(--text-muted); font-size: 13px;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media(max-width:900px) {
+      .hero-grid { grid-template-columns: 1fr; text-align: center; padding-top: 100px; }
+      .hero-content h1 { font-size: 44px; }
+      .hero-content .tagline { margin: 0 auto 32px; }
+      .hero-btns { justify-content: center; }
+      .hero-img-main { max-width: 380px; }
+    }
+    @media(max-width:768px) {
+      nav { padding: 14px 20px; }
+      .nav-links { display: none; flex-direction: column; background: rgba(13,13,13,.98); position: absolute; top: 100%; left: 0; right: 0; padding: 20px; gap: 16px; border-bottom: 1px solid #222; }
+      .nav-links.open { display: flex; }
+      .hamburger { display: flex; }
+      .section { padding: 60px 20px; }
+      .section-header h2 { font-size: 30px; }
+      .menu-grid { grid-template-columns: 1fr 1fr; }
+      .feedbacks-grid { grid-template-columns: 1fr; }
+      .feedback-form { padding: 24px; }
+    }
+    @media(max-width:480px) {
+      .menu-grid { grid-template-columns: 1fr; }
+      .hero-content h1 { font-size: 34px; }
+      .hero-img-main { max-width: 280px; }
+    }
+
+    /* ===== REVEAL ANIMATIONS ===== */
+    .reveal { opacity: 0; transform: translateY(40px); transition: .8s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* ===== PURCHASE TOAST ===== */
+    .toast {
+      position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+      background: var(--orange); color: #fff; padding: 16px 32px;
+      border-radius: 50px; font-weight: 700; z-index: 3000;
+      display: none; align-items: center; gap: 12px;
+      box-shadow: 0 8px 30px rgba(255,107,0,.4);
+      animation: zoomIn .3s ease;
+    }
+    .toast.show { display: flex; }
+  </style>
+</head>
+<body>
+
+<!-- ===== NAV ===== -->
+<nav id="navbar">
+  <a href="#hero" class="logo"><i class="fas fa-burger"></i> BurgeMax</a>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#hero">Início</a></li>
+    <li><a href="#bestsellers">Destaques</a></li>
+    <li><a href="#menu">Cardápio</a></li>
+    <li><a href="#feed">Feed</a></li>
+    <li><a href="#feedbacks">Avaliações</a></li>
+    <li><a href="#menu" class="nav-cta"><i class="fas fa-shopping-bag"></i> Peça Já</a></li>
+  </ul>
+  <button class="hamburger" id="hamburger" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- ===== HERO ===== -->
+<section class="hero" id="hero">
+  <div class="hero-grid">
+    <div class="hero-content">
+      <p class="sub-brand"><i class="fas fa-fire"></i> Desde 2024</p>
+      <h1>BurgeMax</h1>
+      <p class="tagline">O sabor que conquista — ingredientes frescos, carnes selecionadas e o ponto perfeito em cada mordida.</p>
+      <div class="hero-btns">
+        <a href="#menu" class="btn btn-primary"><i class="fas fa-shopping-bag"></i> Ver Cardápio</a>
+        <a href="#feedbacks" class="btn btn-outline"><i class="fas fa-star"></i> Avaliações</a>
+      </div>
+    </div>
+    <div class="hero-image">
+      <img class="hero-img-main" src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=600&fit=crop" alt="Hamburguer BurgeMax">
+      <div class="hero-badge"><i class="fas fa-star"></i> +2.000 pedidos</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== BEST SELLERS ===== -->
+<section class="bestsellers-bg" id="bestsellers">
+  <div class="section">
+    <div class="section-header reveal">
+      <h2><i class="fas fa-crown" style="-webkit-text-fill-color:var(--gold);margin-right:10px;"></i> Mais Pedidos</h2>
+      <p>Os queridinhos da casa que todo mundo ama</p>
+    </div>
+    <div class="bestsellers-grid">
+      <div class="bs-card reveal">
+        <span class="bs-badge"><i class="fas fa-crown"></i> #1 Mais Vendido</span>
+        <img class="bs-img" src="https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=400&h=280&fit=crop" alt="BurgeMax Especial">
+        <h3>BurgeMax Especial</h3>
+        <p class="desc">2 smashes 150g, cheddar duplo, bacon, onion rings e molho secreto</p>
+        <span class="price">R$ 39,90</span><br>
+        <button class="btn btn-primary btn-buy" onclick="openChat('BurgeMax Especial')"><i class="fas fa-shopping-bag"></i> Pedir</button>
+      </div>
+      <div class="bs-card reveal">
+        <span class="bs-badge"><i class="fas fa-fire"></i> #2 Mais Vendido</span>
+        <img class="bs-img" src="https://images.unsplash.com/photo-1550547660-d9450f859349?w=400&h=280&fit=crop" alt="Smash Clássico">
+        <h3>Smash Clássico</h3>
+        <p class="desc">Smash 120g, queijo cheddar, alface, tomate e molho especial</p>
+        <span class="price">R$ 26,90</span><br>
+        <button class="btn btn-primary btn-buy" onclick="openChat('Smash Clássico')"><i class="fas fa-shopping-bag"></i> Pedir</button>
+      </div>
+      <div class="bs-card reveal">
+        <span class="bs-badge"><i class="fas fa-fire"></i> #3 Mais Vendido</span>
+        <img class="bs-img" src="https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=400&h=280&fit=crop" alt="Duplo Cheddar Bacon">
+        <h3>Duplo Cheddar Bacon</h3>
+        <p class="desc">2 smashes 120g, cheddar duplo, bacon crocante, cebola caramelizada</p>
+        <span class="price">R$ 34,90</span><br>
+        <button class="btn btn-primary btn-buy" onclick="openChat('Duplo Cheddar Bacon')"><i class="fas fa-shopping-bag"></i> Pedir</button>
+      </div>
+      <div class="bs-card reveal">
+        <span class="bs-badge"><i class="fas fa-fire"></i> #4 Mais Vendido</span>
+        <img class="bs-img" src="https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=400&h=280&fit=crop" alt="Bacon Explosion">
+        <h3>Bacon Explosion</h3>
+        <p class="desc">Smash 150g, bacon em tiras, bacon crispy, cheddar e barbecue</p>
+        <span class="price">R$ 36,90</span><br>
+        <button class="btn btn-primary btn-buy" onclick="openChat('Bacon Explosion')"><i class="fas fa-shopping-bag"></i> Pedir</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== MENU / CARDÁPIO ===== -->
+<section class="section" id="menu">
+  <div class="section-header reveal">
+    <h2><i class="fas fa-book-open" style="-webkit-text-fill-color:var(--orange);margin-right:10px;"></i> Cardápio</h2>
+    <p>Escolha seu pedido e entre em contato conosco</p>
+  </div>
+  <div class="menu-tabs reveal" id="menuTabs">
+    <button class="menu-tab active" data-filter="all">Todos</button>
+    <button class="menu-tab" data-filter="hamburguer">Hambúrgueres</button>
+    <button class="menu-tab" data-filter="acompanhamento">Acompanhamentos</button>
+    <button class="menu-tab" data-filter="bebida">Bebidas</button>
+  </div>
+  <div class="menu-grid" id="menuGrid">
+    <!-- Hamburgueres -->
+    <div class="menu-item" data-category="hamburguer">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=280&fit=crop" alt="Smash Clássico">
+      <div class="menu-item-body">
+        <h3>Smash Clássico</h3>
+        <p class="desc">Pão brioche, smash 120g, queijo cheddar, alface, tomate e molho especial da casa</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 26,90</span>
+          <button class="btn-buy" onclick="openChat('Smash Clássico')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-item" data-category="hamburguer">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1550547660-d9450f859349?w=400&h=280&fit=crop" alt="Duplo Cheddar Bacon">
+      <div class="menu-item-body">
+        <h3>Duplo Cheddar Bacon</h3>
+        <p class="desc">Pão australiano, 2 smashes 120g, cheddar duplo, bacon crocante e cebola caramelizada</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 34,90</span>
+          <button class="btn-buy" onclick="openChat('Duplo Cheddar Bacon')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-item" data-category="hamburguer">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=400&h=280&fit=crop" alt="Costela Barbecue">
+      <div class="menu-item-body">
+        <h3>Costela Barbecue</h3>
+        <p class="desc">Pão brioche, costela desfiada 150g, barbecue artesanal, queijo prato e anéis de cebola</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 32,90</span>
+          <button class="btn-buy" onclick="openChat('Costela Barbecue')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-item" data-category="hamburguer">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=400&h=280&fit=crop" alt="Frango Supremo">
+      <div class="menu-item-body">
+        <h3>Frango Supremo</h3>
+        <p class="desc">Pão integral, filé de frango empanado 150g, queijo mussarela, alface, tomate e maionese verde</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 28,90</span>
+          <button class="btn-buy" onclick="openChat('Frango Supremo')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-item" data-category="hamburguer">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1586816001966-79b736744398?w=400&h=280&fit=crop" alt="Veggie Delight">
+      <div class="menu-item-body">
+        <h3>Veggie Delight</h3>
+        <p class="desc">Pão integral, hambúrguer de grão de bico, queijo vegano, alface, tomate e molho de ervas</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 27,90</span>
+          <button class="btn-buy" onclick="openChat('Veggie Delight')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-item" data-category="hamburguer">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=400&h=280&fit=crop" alt="Triple Queijo">
+      <div class="menu-item-body">
+        <h3>Triple Queijo</h3>
+        <p class="desc">Pão brioche, smash 180g, cheddar, provolone, catupiry e molho da casa</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 35,90</span>
+          <button class="btn-buy" onclick="openChat('Triple Queijo')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-item" data-category="hamburguer">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=400&h=280&fit=crop" alt="Bacon Explosion">
+      <div class="menu-item-body">
+        <h3>Bacon Explosion</h3>
+        <p class="desc">Pão australiano, smash 150g, bacon em tiras, bacon crispy, cheddar e barbecue</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 36,90</span>
+          <button class="btn-buy" onclick="openChat('Bacon Explosion')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-item" data-category="hamburguer">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400&h=280&fit=crop" alt="Jalapeño Texas">
+      <div class="menu-item-body">
+        <h3>Jalapeño Texas</h3>
+        <p class="desc">Pão brioche, smash 150g, jalapeños, cheddar, guacamole e molho picante</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 33,90</span>
+          <button class="btn-buy" onclick="openChat('Jalapeño Texas')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-item" data-category="hamburguer">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1551782450-a2132b4ba21d?w=400&h=280&fit=crop" alt="Cheddar Cremoso">
+      <div class="menu-item-body">
+        <h3>Cheddar Cremoso</h3>
+        <p class="desc">Pão brioche, smash 120g, cheddar cremoso, cebola roxa, rúcula e molho especial</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 29,90</span>
+          <button class="btn-buy" onclick="openChat('Cheddar Cremoso')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-item" data-category="hamburguer">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=280&fit=crop" alt="BurgeMax Especial">
+      <div class="menu-item-body">
+        <h3>BurgeMax Especial</h3>
+        <p class="desc">Pão brioche artesanal, 2 smashes 150g, cheddar, bacon, onion rings e molho secreto</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 39,90</span>
+          <button class="btn-buy" onclick="openChat('BurgeMax Especial')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <!-- Acompanhamentos -->
+    <div class="menu-item" data-category="acompanhamento">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=280&fit=crop" alt="Batata Cheddar Bacon">
+      <div class="menu-item-body">
+        <h3>Batata Cheddar Bacon</h3>
+        <p class="desc">Batata frita crocante coberta com cheddar cremoso e bacon crispy</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 22,90</span>
+          <button class="btn-buy" onclick="openChat('Batata Cheddar Bacon')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-item" data-category="acompanhamento">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1639024471283-03518883512d?w=400&h=280&fit=crop" alt="Onion Rings">
+      <div class="menu-item-body">
+        <h3>Onion Rings</h3>
+        <p class="desc">Anéis de cebola empanados crocantes servidos com molho barbecue</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 18,90</span>
+          <button class="btn-buy" onclick="openChat('Onion Rings')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-item" data-category="acompanhamento">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1562967914-608f82629710?w=400&h=280&fit=crop" alt="Nuggets de Frango">
+      <div class="menu-item-body">
+        <h3>Nuggets de Frango</h3>
+        <p class="desc">8 unidades de frango empanado crocante com molho mostarda e mel</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 19,90</span>
+          <button class="btn-buy" onclick="openChat('Nuggets de Frango')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-item" data-category="acompanhamento">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1511919886926-f8c9f32c1e3d?w=400&h=280&fit=crop" alt="Batata Rústica">
+      <div class="menu-item-body">
+        <h3>Batata Rústica</h3>
+        <p class="desc">Batata rústica com alecrim, alho assado e queijo parmesão ralado</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 20,90</span>
+          <button class="btn-buy" onclick="openChat('Batata Rústica')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-item" data-category="acompanhamento">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&h=280&fit=crop" alt="Mandioca Frita">
+      <div class="menu-item-body">
+        <h3>Mandioca Frita</h3>
+        <p class="desc">Mandioca frita crocante por fora e macia por dentro com molho de alho</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 17,90</span>
+          <button class="btn-buy" onclick="openChat('Mandioca Frita')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <!-- Bebidas -->
+    <div class="menu-item" data-category="bebida">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&h=280&fit=crop" alt="Coca-Cola">
+      <div class="menu-item-body">
+        <h3>Coca-Cola 350ml</h3>
+        <p class="desc">Coca-Cola gelada lata 350ml — o clássico que não pode faltar</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 7,90</span>
+          <button class="btn-buy" onclick="openChat('Coca-Cola 350ml')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-item" data-category="bebida">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1572495641004-28421ae4584c?w=400&h=280&fit=crop" alt="Milkshake Chocolate">
+      <div class="menu-item-body">
+        <h3>Milkshake de Chocolate</h3>
+        <p class="desc">Sorvete de chocolate belga, calda de chocolate e chantilly</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 18,90</span>
+          <button class="btn-buy" onclick="openChat('Milkshake de Chocolate')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-item" data-category="bebida">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1551024506-0bccd828d307?w=400&h=280&fit=crop" alt="Milkshake Morango">
+      <div class="menu-item-body">
+        <h3>Milkshake de Morango</h3>
+        <p class="desc">Sorvete de morango, calda de morango fresco e chantilly cremoso</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 18,90</span>
+          <button class="btn-buy" onclick="openChat('Milkshake de Morango')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-item" data-category="bebida">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1621263764928-df1444c5e859?w=400&h=280&fit=crop" alt="Suco Laranja">
+      <div class="menu-item-body">
+        <h3>Suco de Laranja Natural</h3>
+        <p class="desc">Suco de laranja natural fresquinho 500ml — sem conservantes</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 9,90</span>
+          <button class="btn-buy" onclick="openChat('Suco de Laranja Natural')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+    <div class="menu-item" data-category="bebida">
+      <img class="menu-item-img" src="https://images.unsplash.com/photo-1563227812-0ea4c22e6cc8?w=400&h=280&fit=crop" alt="Água Mineral">
+      <div class="menu-item-body">
+        <h3>Água Mineral 500ml</h3>
+        <p class="desc">Água mineral natural sem gás 500ml</p>
+        <div class="menu-item-footer">
+          <span class="price">R$ 4,90</span>
+          <button class="btn-buy" onclick="openChat('Água Mineral 500ml')"><i class="fas fa-shopping-bag"></i> Comprar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CHAT MODAL ===== -->
+<div class="chat-overlay" id="chatOverlay">
+  <div class="chat-modal">
+    <div class="chat-header">
+      <img src="https://images.unsplash.com/photo-1552058544-f2b08422138a?w=80&h=80&fit=crop" alt="Atendente">
+      <div class="info">
+        <h4>BurgeMax Atendimento</h4>
+        <span><i class="fas fa-circle" style="font-size:8px;margin-right:4px;"></i> Online</span>
+      </div>
+      <button class="chat-close" onclick="closeChat()">&times;</button>
+    </div>
+    <div class="chat-body" id="chatBody">
+      <div class="chat-msg attendant">
+        Olá! Bem-vindo(a) à BurgeMax! 🍔<br>Como posso ajudar?
+        <span class="time">14:30</span>
+      </div>
+      <div class="chat-msg customer">
+        Oi! Gostaria de fazer um pedido, por favor.
+        <span class="time">14:31</span>
+      </div>
+      <div class="chat-msg attendant">
+        Claro! Me diga o que você deseja. 😊
+        <span class="time">14:31</span>
+      </div>
+      <div class="chat-msg customer" id="chatProductMsg">
+        Quero um <strong>Smash Clássico</strong> e uma porção de <strong>Batata Cheddar Bacon</strong>.
+        <span class="time">14:32</span>
+      </div>
+      <div class="chat-msg attendant">
+        Ótima escolha! Alguma bebida para acompanhar?
+        <span class="time">14:32</span>
+      </div>
+      <div class="chat-msg customer">
+        Uma Coca-Cola gelada, por favor!
+        <span class="time">14:33</span>
+      </div>
+      <div class="chat-msg attendant">
+        Perfeito! Seu pedido:<br>
+        🍔 Smash Clássico — R$ 26,90<br>
+        🍟 Batata Cheddar Bacon — R$ 22,90<br>
+        🥤 Coca-Cola 350ml — R$ 7,90<br>
+        <strong>Total: R$ 57,70</strong><br><br>
+        O prazo de entrega é de 30 a 40 minutos. Tudo certo? ✅
+        <span class="time">14:33</span>
+      </div>
+      <div class="chat-msg customer">
+        Perfeito! Pode confirmar o pedido. Obrigado! 😄
+        <span class="time">14:34</span>
+      </div>
+      <div class="chat-msg attendant">
+        Pedido confirmado! 🎉<br>Em breve seu lanche chega quentinho. Agradecemos a preferência! ❤️
+        <span class="time">14:34</span>
+      </div>
+    </div>
+    <div class="chat-footer">
+      <button class="attach"><i class="fas fa-paperclip"></i></button>
+      <input type="text" placeholder="Digite sua mensagem..." id="chatInput">
+      <button onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CONTENT FEED ===== -->
+<section class="feed-bg" id="feed">
+  <div class="section">
+    <div class="section-header reveal">
+      <h2><i class="fas fa-hashtag" style="-webkit-text-fill-color:var(--orange);margin-right:10px;"></i> Feed BurgeMax</h2>
+      <p>Fique por dentro das novidades, bastidores e promoções</p>
+    </div>
+    <div class="stories reveal">
+      <div class="story">
+        <div class="story-ring"><img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=150&h=150&fit=crop" alt="BurgeMax"></div>
+        <span>BurgeMax</span>
+      </div>
+      <div class="story">
+        <div class="story-ring"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop" alt="Promoção"></div>
+        <span>Promoção</span>
+      </div>
+      <div class="story">
+        <div class="story-ring"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop" alt="Bastidores"></div>
+        <span>Bastidores</span>
+      </div>
+      <div class="story">
+        <div class="story-ring"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop" alt="Novidades"></div>
+        <span>Novidades</span>
+      </div>
+      <div class="story">
+        <div class="story-ring"><img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop" alt="Cliente"></div>
+        <span>Cliente do Dia</span>
+      </div>
+      <div class="story">
+        <div class="story-ring"><img src="https://images.unsplash.com/photo-1550547660-d9450f859349?w=150&h=150&fit=crop" alt="Lanche"></div>
+        <span>Lançamento</span>
+      </div>
+    </div>
+    <div class="feed-grid">
+      <div class="feed-post reveal">
+        <img class="feed-post-img" src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=600&fit=crop" alt="BurgeMax">
+        <div class="feed-post-body">
+          <div class="post-header">
+            <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=60&h=60&fit=crop" alt="BurgeMax">
+            <strong>BurgeMax</strong>
+          </div>
+          <p>O Smash Clássico está irresistível hoje! 🔥 Quem vai pedir o seu?</p>
+          <div class="feed-post-actions">
+            <i class="fas fa-heart"></i>
+            <i class="fas fa-comment"></i>
+            <i class="fas fa-share"></i>
+          </div>
+        </div>
+      </div>
+      <div class="feed-post reveal">
+        <img class="feed-post-img" src="https://images.unsplash.com/photo-1550547660-d9450f859349?w=600&h=600&fit=crop" alt="BurgeMax">
+        <div class="feed-post-body">
+          <div class="post-header">
+            <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=60&h=60&fit=crop" alt="BurgeMax">
+            <strong>BurgeMax</strong>
+          </div>
+          <p>Duplo Cheddar Bacon saindo do fogo! 🔥🧀 Quem ama bacon levanta a mão! 🙋‍♂️</p>
+          <div class="feed-post-actions">
+            <i class="fas fa-heart"></i>
+            <i class="fas fa-comment"></i>
+            <i class="fas fa-share"></i>
+          </div>
+        </div>
+      </div>
+      <div class="feed-post reveal">
+        <img class="feed-post-img" src="https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=600&h=600&fit=crop" alt="BurgeMax">
+        <div class="feed-post-body">
+          <div class="post-header">
+            <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=60&h=60&fit=crop" alt="BurgeMax">
+            <strong>BurgeMax</strong>
+          </div>
+          <p>Nos bastidores: preparando o BurgeMax Especial! 🍔👨‍🍳 O melhor hambúrguer da cidade.</p>
+          <div class="feed-post-actions">
+            <i class="fas fa-heart"></i>
+            <i class="fas fa-comment"></i>
+            <i class="fas fa-share"></i>
+          </div>
+        </div>
+      </div>
+      <div class="feed-post reveal">
+        <img class="feed-post-img" src="https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=600&h=600&fit=crop" alt="BurgeMax">
+        <div class="feed-post-body">
+          <div class="post-header">
+            <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=60&h=60&fit=crop" alt="BurgeMax">
+            <strong>BurgeMax</strong>
+          </div>
+          <p>Promoção relâmpago! 😱 Todo cardápio com 15% de desconto nas bebidas. Corre! ⏰</p>
+          <div class="feed-post-actions">
+            <i class="fas fa-heart"></i>
+            <i class="fas fa-comment"></i>
+            <i class="fas fa-share"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FEEDBACKS ===== -->
+<section class="section" id="feedbacks">
+  <div class="section-header reveal">
+    <h2><i class="fas fa-star" style="-webkit-text-fill-color:var(--gold);margin-right:10px;"></i> Avaliações</h2>
+    <p>Veja o que nossos clientes estão falando</p>
+  </div>
+
+  <div class="feedback-summary reveal">
+    <div class="big-rate">4.8</div>
+    <div>
+      <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i></div>
+      <p>Baseado em mais de 2.000 avaliações</p>
+    </div>
+  </div>
+
+  <div class="feedbacks-grid" id="feedbacksGrid">
+    <!-- 20 Feedbacks -->
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" alt="Ana">
+        <div class="info">
+          <h4>Ana Clara Martins</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"Simplesmente o melhor hambúrguer que já comi! O BurgeMax Especial é fenomenal, carne suculenta e o molho secreto é de outro nível. Super recomendo!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=250&fit=crop" alt="Burger">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop" alt="Carlos">
+        <div class="info">
+          <h4>Carlos Eduardo Silva</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"Batata Cheddar Bacon é viciante! Peço toda semana. Entrega super rápida e atendimento nota 10. BurgeMax é a melhor hamburgueria da cidade!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=250&fit=crop" alt="Batata">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop" alt="Julia">
+        <div class="info">
+          <h4>Julia Fernanda Costa</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"O Duplo Cheddar Bacon é amor à primeira mordida! O bacon é super crocante e o cheddar bem cremoso. Meu marido amou também, já virou nosso point!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1550547660-d9450f859349?w=400&h=250&fit=crop" alt="Duplo Cheddar">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop" alt="Rafael">
+        <div class="info">
+          <h4>Rafael Almeida Neto</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"Milkshake de chocolate delicioso e o Smash Clássico é perfeito! Preço justo e qualidade excepcional. Virei cliente fiel, recomendo de olhos fechados!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1572495641004-28421ae4584c?w=400&h=250&fit=crop" alt="Milkshake">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop" alt="Mariana">
+        <div class="info">
+          <h4>Mariana Oliveira Santos</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"Adorei a opção veggie! O Veggie Delight é muito saboroso, finalmente um hambúrguer vegano de verdade. Atendimento incrível, super indico!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1586816001966-79b736744398?w=400&h=250&fit=crop" alt="Veggie">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop" alt="Lucas">
+        <div class="info">
+          <h4>Lucas Henrique Pereira</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"O melhor hambúrguer artesanal da região! O BurgeMax Especial com batata rústica é a combinação perfeita. Entrega sempre no horário. Nota 1000!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=250&fit=crop" alt="Especial">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop" alt="Camila">
+        <div class="info">
+          <h4>Camila Rocha Barbosa</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"Todo mundo deveria experimentar o Costela Barbecue! É surreal de tão bom. Carne desfiada no ponto certo, barbecue artesanal divino. Apaixonada!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=400&h=250&fit=crop" alt="Costela">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop" alt="Felipe">
+        <div class="info">
+          <h4>Felipe Augusto Lima</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"Onion Rings crocantes e o Jalapeño Texas é perfeito pra quem gosta de um toque picante. Atendimento rápido e comida de primeira. Nota 10!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400&h=250&fit=crop" alt="Jalapeño">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=100&h=100&fit=crop" alt="Isabela">
+        <div class="info">
+          <h4>Isabela Cristina Dias</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"O Frango Supremo é maravilhoso! Frango empanado crocante e maionese verde caseira. O suco de laranja é natural de verdade. AMO!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?w=400&h=250&fit=crop" alt="Frango">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&h=100&fit=crop" alt="Thiago">
+        <div class="info">
+          <h4>Thiago Menezes Faria</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"Bacon Explosion é o nome certo! É uma explosão de sabores. O bacon é crocante, o cheddar derretido... hambúrguer dos deuses. Peço sempre!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=400&h=250&fit=crop" alt="Bacon">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=100&h=100&fit=crop" alt="Larissa">
+        <div class="info">
+          <h4>Larissa Beatriz Souza</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"A Batata Rústica com alecrim é viciante! E o Cheddar Cremoso é de comer rezando. Tudo fresquinho e bem embalado. Melhor hamburgueria!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1511919886926-f8c9f32c1e3d?w=400&h=250&fit=crop" alt="Rústica">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop" alt="Pedro">
+        <div class="info">
+          <h4>Pedro Henrique Campos</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"Triple Queijo é para os amantes de queijo como eu! Três queijos diferentes que harmonizam perfeitamente. Atendimento nota 10!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1550547660-d9450f859349?w=400&h=250&fit=crop" alt="Triple">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=100&h=100&fit=crop" alt="Amanda">
+        <div class="info">
+          <h4>Amanda Vitória Carvalho</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"O Milkshake de Morango é cremoso e delicioso! Combinado com o Smash Clássico forma o lanche perfeito. Entrega super rápida!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1551024506-0bccd828d307?w=400&h=250&fit=crop" alt="Milkshake Morango">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop" alt="Gustavo">
+        <div class="info">
+          <h4>Gustavo Moreira Leite</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"Nuggets de frango crocantes e suculentos! O molho mostarda e mel é perfeito. Meus filhos amaram. Com certeza vamos repetir!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1562967914-608f82629710?w=400&h=250&fit=crop" alt="Nuggets">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" alt="Juliana">
+        <div class="info">
+          <h4>Juliana Paes Monteiro</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"Que delícia de hambúrguer! Pedi o BurgeMax Especial e veio perfeito, bem montado e quentinho. O molho secreto é maravilhoso. Super recomendo!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=400&h=250&fit=crop" alt="Especial">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop" alt="Bruno">
+        <div class="info">
+          <h4>Bruno Oliveira Tavares</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"Mandioca Frita com molho de alho é sensacional! E o preço é super justo pela qualidade. Virei cliente fiel da BurgeMax, melhor hamburgueria!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400&h=250&fit=crop" alt="Mandioca">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop" alt="Fernanda">
+        <div class="info">
+          <h4>Fernanda Castro Dias</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"Atendimento excepcional! Pedi pelo WhatsApp e fui super bem atendida. O hambúrguer chegou quentinho e delicioso. Experiência incrível!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=250&fit=crop" alt="Burger">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop" alt="Vinícius">
+        <div class="info">
+          <h4>Vinícius Andrade Rocha</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"Costela Barbecue é o meu favorito! Carne desfiada no ponto, barbecue caseiro... combinação perfeita. Entrega sempre antes do prazo!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1550547660-d9450f859349?w=400&h=250&fit=crop" alt="Costela">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop" alt="Tatiane">
+        <div class="info">
+          <h4>Tatiane Cristina Nunes</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"O combo Smash Clássico + Batata Cheddar + Milkshake é o melhor pedido! Tudo muito saboroso e bem preparado. Nota 10 para BurgeMax!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=250&fit=crop" alt="Combo">
+    </div>
+    <div class="fb-card reveal">
+      <div class="fb-header">
+        <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop" alt="Diego">
+        <div class="info">
+          <h4>Diego Alves Cardoso</h4>
+          <div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+        </div>
+      </div>
+      <p class="fb-text">"Já pedi várias vezes e nunca me decepcionei! O Bacon Explosion é sensacional, e a entrega é sempre rápida e educada. Melhor da cidade!"</p>
+      <img class="fb-img" src="https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=400&h=250&fit=crop" alt="Bacon Explosion">
+    </div>
+  </div>
+
+  <!-- Feedback Form -->
+  <div class="feedback-form reveal">
+    <h3><i class="fas fa-pen" style="color:var(--orange);margin-right:8px;"></i> Deixe sua Avaliação</h3>
+    <form onsubmit="event.preventDefault(); showToast();">
+      <div class="form-group">
+        <label>Seu Nome</label>
+        <input type="text" placeholder="Digite seu nome" required>
+      </div>
+      <div class="form-group">
+        <label>Sua Nota</label>
+        <div class="star-input" id="starInput">
+          <i class="fas fa-star" data-star="1"></i>
+          <i class="fas fa-star" data-star="2"></i>
+          <i class="fas fa-star" data-star="3"></i>
+          <i class="fas fa-star" data-star="4"></i>
+          <i class="fas fa-star" data-star="5"></i>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Seu Depoimento</label>
+        <textarea placeholder="Conte sua experiência com a BurgeMax..." required></textarea>
+      </div>
+      <div class="form-group">
+        <label>Mídia (imagem ou vídeo)</label>
+        <div class="file-upload" onclick="document.getElementById('fileInput').click()">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <span>Clique para enviar foto ou vídeo</span>
+          <input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;font-size:18px;padding:16px;">
+        <i class="fas fa-paper-plane"></i> Enviar Avaliação
+      </button>
+    </form>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <h4><i class="fas fa-burger" style="color:var(--orange);margin-right:6px;"></i> BurgeMax</h4>
+      <p>O sabor que conquista — ingredientes frescos, carnes selecionadas e o ponto perfeito em cada mordida.</p>
+    </div>
+    <div>
+      <h4>Horários</h4>
+      <p>Seg a Qui: 18h - 23h</p>
+      <p>Sex e Sáb: 18h - 00h</p>
+      <p>Dom: 18h - 22h</p>
+    </div>
+    <div>
+      <h4>Contato</h4>
+      <a href="#"><i class="fab fa-whatsapp" style="color:#25D366;margin-right:6px;"></i> (11) 99999-8888</a>
+      <a href="#"><i class="fas fa-envelope" style="color:var(--orange);margin-right:6px;"></i> contato@burgemax.com.br</a>
+      <a href="#"><i class="fas fa-map-marker-alt" style="color:var(--orange);margin-right:6px;"></i> Rua Augusta, 1500 - Consolação</a>
+    </div>
+    <div>
+      <h4>Siga a Gente</h4>
+      <a href="#"><i class="fab fa-instagram" style="color:#E4405F;margin-right:6px;"></i> @burgemax</a>
+      <a href="#"><i class="fab fa-facebook" style="color:#1877F2;margin-right:6px;"></i> /burgemax</a>
+      <a href="#"><i class="fab fa-tiktok" style="margin-right:6px;"></i> @burgemax</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>&copy; 2026 BurgeMax. Todos os direitos reservados. Site para portfólio.</p>
+  </div>
+</footer>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast">
+  <i class="fas fa-check-circle"></i>
+  <span>Obrigado! Sua avaliação foi enviada com sucesso!</span>
+</div>
+
+<script>
+  // === NAVBAR SCROLL ===
+  const navbar = document.getElementById('navbar');
+  const hamburger = document.getElementById('hamburger');
+  const navLinks = document.getElementById('navLinks');
+
+  window.addEventListener('scroll', () => {
+    navbar.classList.toggle('scrolled', window.scrollY > 80);
+  });
+
+  hamburger.addEventListener('click', () => {
+    navLinks.classList.toggle('open');
+  });
+
+  document.querySelectorAll('.nav-links a').forEach(a => {
+    a.addEventListener('click', () => navLinks.classList.remove('open'));
+  });
+
+  // === MENU FILTER TABS ===
+  const tabs = document.querySelectorAll('.menu-tab');
+  const items = document.querySelectorAll('.menu-item');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const filter = tab.dataset.filter;
+      items.forEach(item => {
+        item.style.display = (filter === 'all' || item.dataset.category === filter) ? 'block' : 'none';
+      });
+    });
+  });
+
+  // === CHAT MODAL ===
+  let selectedProduct = '';
+
+  function openChat(product) {
+    selectedProduct = product;
+    document.getElementById('chatOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    const msgEl = document.getElementById('chatProductMsg');
+    if (msgEl) {
+      msgEl.innerHTML = `Quero um <strong>${product}</strong> e uma porção de <strong>Batata Cheddar Bacon</strong>.`;
+    }
+  }
+
+  function closeChat() {
+    document.getElementById('chatOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  document.getElementById('chatOverlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeChat();
+  });
+
+  function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    const body = document.getElementById('chatBody');
+    const time = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const msg = document.createElement('div');
+    msg.className = 'chat-msg customer';
+    msg.innerHTML = `${text}<span class="time">${time}</span>`;
+    body.appendChild(msg);
+    input.value = '';
+    body.scrollTop = body.scrollHeight;
+
+    setTimeout(() => {
+      const reply = document.createElement('div');
+      reply.className = 'chat-msg attendant';
+      const replies = [
+        'Perfeito! Vou anotar aqui. 😊',
+        'Ótima escolha! Mais alguma coisa?',
+        'Pode deixar! Vou confirmar seu pedido. ✅',
+        'Hmm, delícia! Vou preparar com carinho. 🍔',
+        'Anotado! Em breve sai para entrega. 🚀'
+      ];
+      reply.innerHTML = `${replies[Math.floor(Math.random()*replies.length)]}<span class="time">${time}</span>`;
+      body.appendChild(reply);
+      body.scrollTop = body.scrollHeight;
+    }, 1200);
+  }
+
+  document.getElementById('chatInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
+
+  // === STAR INPUT ===
+  const starInput = document.getElementById('starInput');
+  if (starInput) {
+    const stars = starInput.querySelectorAll('i');
+    stars.forEach(star => {
+      star.addEventListener('click', () => {
+        const val = parseInt(star.dataset.star);
+        stars.forEach((s, i) => s.classList.toggle('active', i < val));
+      });
+      star.addEventListener('mouseenter', () => {
+        const val = parseInt(star.dataset.star);
+        stars.forEach((s, i) => s.style.color = i < val ? '#FFD700' : '#444');
+      });
+      star.addEventListener('mouseleave', () => {
+        stars.forEach(s => s.style.color = s.classList.contains('active') ? '#FFD700' : '#444');
+      });
+    });
+  }
+
+  // === TOAST ===
+  function showToast() {
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3500);
+  }
+
+  // === SCROLL REVEAL ===
+  const revealEls = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: .1 });
+
+  revealEls.forEach(el => observer.observe(el));
+
+  // === SMOOTH NAV CLICK ===
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  });
+</script>
+</body>
+</html>

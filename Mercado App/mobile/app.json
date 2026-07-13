@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Central",
+    "slug": "central",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#c62828"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.central.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#c62828"
+      },
+      "package": "com.central.app"
+    }
+  }
+}
