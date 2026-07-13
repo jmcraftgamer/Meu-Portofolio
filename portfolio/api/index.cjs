@@ -1,11 +1,12 @@
-var redis = null;
+var bcrypt = require('bcryptjs');
+var jwt = require('jsonwebtoken');
+var JWT_SECRET = process.env.JWT_SECRET || 'portfolio-secret-key-2024';
+
+var supabase = null;
 try {
-  var Redis = require('@upstash/redis');
-  if (process.env.KV_URL || process.env.UPSTASH_REDIS_REST_URL) {
-    redis = new Redis.Redis({
-      url: process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN,
-    });
+  var { createClient } = require('@supabase/supabase-js');
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+    supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
   }
 } catch (e) {}
 
@@ -36,65 +37,14 @@ var SEED_PRODUCTS = [
 
 var VALID_CATEGORIES = ['Mercearia', 'Hortifruit', 'Acougue', 'Padaria', 'Bebidas', 'Biscoitos', 'Higiene', 'Limpeza', 'Utilidades', 'Outros'];
 
-var bcrypt = require('bcryptjs');
-var jwt = require('jsonwebtoken');
-var JWT_SECRET = process.env.JWT_SECRET || 'portfolio-secret-key-2024';
+var products = SEED_PRODUCTS.map(function(p, i) { return { id: i + 1, ...p, created_at: new Date().toISOString() }; });
 
 // In-memory fallback
-var memUsers = [{ id: 1, name: 'Administrador', email: 'admin@gmail.com', password: bcrypt.hashSync('45677VDTYT', 10), phone: '(11) 99999-0000', company: 'DevPro', isAdmin: 1, createdAt: new Date().toISOString() }];
+var memUsers = [{ id: 1, name: 'Administrador', email: 'admin@gmail.com', password: bcrypt.hashSync('45677VDTYT', 10), phone: '(11) 99999-0000', company: 'DevPro', isAdmin: true, createdAt: new Date().toISOString() }];
 var memOrders = [];
 var memMessages = [];
 var memNextUserId = 2;
 var memNextOrderId = 1;
-var memNextMsgId = 1;
-
-async function getData() {
-  if (redis) {
-    try {
-      var seeded = await redis.get('seeded');
-      if (!seeded) {
-        await redis.set('seeded', '1');
-        await redis.set('users', JSON.stringify(memUsers));
-        await redis.set('orders', JSON.stringify(memOrders));
-        await redis.set('messages', JSON.stringify(memMessages));
-        await redis.set('nextUserId', memNextUserId);
-        await redis.set('nextOrderId', memNextOrderId);
-        await redis.set('nextMsgId', memNextMsgId);
-      }
-      return {
-        users: JSON.parse(await redis.get('users') || '[]'),
-        orders: JSON.parse(await redis.get('orders') || '[]'),
-        messages: JSON.parse(await redis.get('messages') || '[]'),
-        nextUserId: parseInt(await redis.get('nextUserId') || '2'),
-        nextOrderId: parseInt(await redis.get('nextOrderId') || '1'),
-        nextMsgId: parseInt(await redis.get('nextMsgId') || '1'),
-      };
-    } catch (e) { /* fallback to memory */ }
-  }
-  return { users: memUsers, orders: memOrders, messages: memMessages, nextUserId: memNextUserId, nextOrderId: memNextOrderId, nextMsgId: memNextMsgId };
-}
-
-async function saveData(data) {
-  if (redis) {
-    try {
-      await redis.set('users', JSON.stringify(data.users));
-      await redis.set('orders', JSON.stringify(data.orders));
-      await redis.set('messages', JSON.stringify(data.messages));
-      await redis.set('nextUserId', data.nextUserId);
-      await redis.set('nextOrderId', data.nextOrderId);
-      await redis.set('nextMsgId', data.nextMsgId);
-    } catch (e) {}
-  } else {
-    memUsers = data.users;
-    memOrders = data.orders;
-    memMessages = data.messages;
-    memNextUserId = data.nextUserId;
-    memNextOrderId = data.nextOrderId;
-    memNextMsgId = data.nextMsgId;
-  }
-}
-
-var products = SEED_PRODUCTS.map(function(p, i) { return { id: i + 1, ...p, created_at: new Date().toISOString() }; });
 
 function parseBody(req) {
   return new Promise(function(resolve) {
@@ -117,15 +67,121 @@ function auth(req) {
 function send(res, status, data) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify(data));
-}
-
-module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  res.end(JSON.stringify(data));
+}
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
+async function findUserByEmail(email) {
+  if (supabase) {
+    var r = await supabase.from('users').select('*').eq('email', email).maybeSingle();
+    if (r.data) return { id: r.data.id, name: r.data.name, email: r.data.email, password: r.data.password, phone: r.data.phone || '', company: r.data.company || '', isAdmin: !!r.data.is_admin, createdAt: r.data.created_at };
+  }
+  return memUsers.find(function(u) { return u.email === email; });
+}
+
+async function findUserById(id) {
+  if (supabase) {
+    var r = await supabase.from('users').select('*').eq('id', id).maybeSingle();
+    if (r.data) return { id: r.data.id, name: r.data.name, email: r.data.email, password: r.data.password, phone: r.data.phone || '', company: r.data.company || '', isAdmin: !!r.data.is_admin, createdAt: r.data.created_at };
+  }
+  return memUsers.find(function(u) { return u.id === id; });
+}
+
+async function createUser(name, email, hashedPw, phone, company, isAdmin) {
+  if (supabase) {
+    var r = await supabase.from('users').insert({ name: name, email: email, password: hashedPw, phone: phone || '', company: company || '', is_admin: isAdmin }).select().maybeSingle();
+    if (r.data) return { id: r.data.id, name: r.data.name, email: r.data.email, password: r.data.password, phone: r.data.phone || '', company: r.data.company || '', isAdmin: !!r.data.is_admin, createdAt: r.data.created_at };
+  }
+  var u = { id: memNextUserId++, name: name, email: email, password: hashedPw, phone: phone || '', company: company || '', isAdmin: isAdmin, createdAt: new Date().toISOString() };
+  memUsers.push(u);
+  return u;
+}
+
+async function getOrders(userId) {
+  if (supabase) {
+    var r = await supabase.from('orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+    if (r.data) return r.data.map(function(o) { return { id: o.id, userId: o.user_id, type: o.type, description: o.description, name: o.name, phone: o.phone, company: o.company || '', deliveryTime: o.delivery_time, features: o.features, value: o.value, status: o.status, createdAt: o.created_at }; });
+  }
+  return memOrders.filter(function(o) { return o.userId === userId; }).sort(function(a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+}
+
+async function createOrder(userId, data) {
+  var vals = { site: 450, app_mobile: 650, app_desktop: 1200 };
+  if (supabase) {
+    var r = await supabase.from('orders').insert({ user_id: userId, type: data.type, description: data.description, name: data.name, phone: data.phone, company: data.company || '', delivery_time: data.deliveryTime, features: JSON.stringify(data.features || []), value: vals[data.type] || 0, status: 'pending' }).select().maybeSingle();
+    if (r.data) return { id: r.data.id, userId: r.data.user_id, type: r.data.type, description: r.data.description, name: r.data.name, phone: r.data.phone, company: r.data.company || '', deliveryTime: r.data.delivery_time, features: r.data.features, value: r.data.value, status: r.data.status, createdAt: r.data.created_at };
+  }
+  var o = { id: memNextOrderId++, userId: userId, type: data.type, description: data.description, name: data.name, phone: data.phone, company: data.company || '', deliveryTime: data.deliveryTime, features: JSON.stringify(data.features || []), value: vals[data.type] || 0, status: 'pending', createdAt: new Date().toISOString() };
+  memOrders.push(o);
+  return o;
+}
+
+async function getAllOrders() {
+  if (supabase) {
+    var r = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+    if (r.data) return r.data.map(function(o) { return { id: o.id, userId: o.user_id, type: o.type, description: o.description, name: o.name, phone: o.phone, company: o.company || '', deliveryTime: o.delivery_time, features: o.features, value: o.value, status: o.status, createdAt: o.created_at }; });
+  }
+  return memOrders.slice().sort(function(a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+}
+
+async function findOrderById(id) {
+  if (supabase) {
+    var r = await supabase.from('orders').select('*').eq('id', id).maybeSingle();
+    if (r.data) return { id: r.data.id, userId: r.data.user_id, type: r.data.type, description: r.data.description, name: r.data.name, phone: r.data.phone, company: r.data.company || '', deliveryTime: r.data.delivery_time, features: r.data.features, value: r.data.value, status: r.data.status, createdAt: r.data.created_at };
+  }
+  return memOrders.find(function(o) { return o.id === id; });
+}
+
+async function updateOrderStatus(id, status) {
+  if (supabase) {
+    await supabase.from('orders').update({ status: status }).eq('id', id);
+  }
+  var o = memOrders.find(function(o) { return o.id === id; });
+  if (o) o.status = status;
+}
+
+async function getMessages(orderId) {
+  if (supabase) {
+    var r = await supabase.from('messages').select('*').eq('order_id', orderId).order('created_at', { ascending: true });
+    if (r.data) return r.data.map(function(m) { return { id: m.id, orderId: m.order_id, userId: m.user_id, text: m.text, isAdmin: !!m.is_admin, createdAt: m.created_at }; });
+  }
+  return memMessages.filter(function(m) { return m.orderId === orderId; }).sort(function(a, b) { return new Date(a.createdAt) - new Date(b.createdAt); });
+}
+
+async function createMessage(orderId, userId, text, isAdmin) {
+  if (supabase) {
+    var r = await supabase.from('messages').insert({ order_id: orderId, user_id: userId, text: text, is_admin: isAdmin }).select().maybeSingle();
+    if (r.data) return { id: r.data.id, orderId: r.data.order_id, userId: r.data.user_id, text: r.data.text, isAdmin: !!r.data.is_admin, createdAt: r.data.created_at };
+  }
+  var id = memMessages.length + 1;
+  var m = { id: id, orderId: orderId, userId: userId, text: text, isAdmin: isAdmin ? 1 : 0, createdAt: new Date().toISOString() };
+  memMessages.push(m);
+  return m;
+}
+
+async function getAdminStats() {
+  if (supabase) {
+    var orders = (await supabase.from('orders').select('*')).data || [];
+    var totalOrders = orders.length;
+    var totalRevenue = orders.filter(function(o) { return o.status !== 'cancelled'; }).reduce(function(s, o) { return s + (o.value || 0); }, 0);
+    var pendingOrders = orders.filter(function(o) { return o.status === 'pending'; }).length;
+    var completedOrders = orders.filter(function(o) { return o.status === 'completed'; }).length;
+    var inProgressOrders = orders.filter(function(o) { return o.status === 'in_progress'; }).length;
+    return { totalOrders: totalOrders, totalRevenue: totalRevenue, pendingOrders: pendingOrders, completedOrders: completedOrders, inProgressOrders: inProgressOrders, ordersByMonth: [], ordersByType: [] };
+  }
+  return { totalOrders: memOrders.length, totalRevenue: memOrders.filter(function(o) { return o.status !== 'cancelled'; }).reduce(function(s, o) { return s + o.value; }, 0), pendingOrders: memOrders.filter(function(o) { return o.status === 'pending'; }).length, completedOrders: memOrders.filter(function(o) { return o.status === 'completed'; }).length, inProgressOrders: memOrders.filter(function(o) { return o.status === 'in_progress'; }).length, ordersByMonth: [], ordersByType: [] };
+}
+
+module.exports = async function handler(req, res) {
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 200;
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+    return res.end();
+  }
 
   try {
     var url = new URL(req.url, 'http://localhost');
@@ -133,46 +189,40 @@ module.exports = async function handler(req, res) {
     var method = req.method;
     var body = method !== 'GET' ? await parseBody(req) : {};
 
-    var data = await getData();
-    var { users, orders, messages } = data;
-
     // AUTH
     if (path === '/api/auth/register' && method === 'POST') {
-      if (users.find(function(u) { return u.email === body.email; }))
-        return send(res, 400, { error: 'Email já cadastrado' });
+      var existing = await findUserByEmail(body.email);
+      if (existing) return send(res, 400, { error: 'Email já cadastrado' });
       var hp = bcrypt.hashSync(body.password, 10);
-      var u = { id: data.nextUserId++, name: body.name, email: body.email, password: hp, phone: body.phone || '', company: body.company || '', isAdmin: 0, createdAt: new Date().toISOString() };
-      users.push(u);
-      await saveData(data);
+      var isAdm = (body.email || '').toLowerCase() === 'admin@gmail.com';
+      var u = await createUser(body.name, body.email, hp, body.phone, body.company, isAdm);
       var tk = jwt.sign({ id: u.id, email: u.email, name: u.name, isAdmin: u.isAdmin }, JWT_SECRET);
       return send(res, 200, { token: tk, user: { id: u.id, name: u.name, email: u.email, isAdmin: !!u.isAdmin } });
     }
 
     if (path === '/api/auth/login' && method === 'POST') {
-      var u = users.find(function(u) { return u.email === body.email; });
+      var u = await findUserByEmail(body.email);
       if (!u || !u.password) return send(res, 400, { error: 'Credenciais inválidas' });
       if (!bcrypt.compareSync(body.password, u.password)) return send(res, 400, { error: 'Credenciais inválidas' });
-      var tk = jwt.sign({ id: u.id, email: u.email, name: u.name, isAdmin: u.isAdmin }, JWT_SECRET);
+      var tk = jwt.sign({ id: u.id, email: u.email, name: u.name, isAdmin: !!u.isAdmin }, JWT_SECRET);
       return send(res, 200, { token: tk, user: { id: u.id, name: u.name, email: u.email, isAdmin: !!u.isAdmin } });
     }
 
     if (path === '/api/auth/google' && method === 'POST') {
-      var u = users.find(function(u) { return u.email === body.email; });
+      var u = await findUserByEmail(body.email);
       if (!u) {
-        u = { id: data.nextUserId++, name: body.name, email: body.email, googleId: body.googleId, isAdmin: 0, createdAt: new Date().toISOString() };
-        users.push(u);
-        await saveData(data);
+        u = await createUser(body.name, body.email, null, '', '', false);
       }
-      var tk = jwt.sign({ id: u.id, email: u.email, name: u.name, isAdmin: u.isAdmin }, JWT_SECRET);
+      var tk = jwt.sign({ id: u.id, email: u.email, name: u.name, isAdmin: !!u.isAdmin }, JWT_SECRET);
       return send(res, 200, { token: tk, user: { id: u.id, name: u.name, email: u.email, isAdmin: !!u.isAdmin } });
     }
 
     if (path === '/api/auth/me') {
       var userData = auth(req);
       if (!userData) return send(res, 401, { error: 'Token required' });
-      var u = users.find(function(u) { return u.id === userData.id; });
+      var u = await findUserById(userData.id);
       if (!u) return send(res, 404, { error: 'User not found' });
-      return send(res, 200, { id: u.id, name: u.name, email: u.email, phone: u.phone, company: u.company, isAdmin: u.isAdmin });
+      return send(res, 200, { id: u.id, name: u.name, email: u.email, phone: u.phone, company: u.company, isAdmin: !!u.isAdmin });
     }
 
     // PRODUCTS
@@ -201,14 +251,11 @@ module.exports = async function handler(req, res) {
       var userData = auth(req);
       if (!userData) return send(res, 401, { error: 'Token required' });
       if (method === 'POST') {
-        var vals = { site: 450, app_mobile: 650, app_desktop: 1200 };
-        var o = { id: data.nextOrderId++, userId: userData.id, type: body.type, description: body.description, name: body.name, phone: body.phone, company: body.company || '', deliveryTime: body.deliveryTime, features: JSON.stringify(body.features || []), value: vals[body.type] || 0, status: 'pending', createdAt: new Date().toISOString() };
-        orders.push(o);
-        await saveData(data);
+        var o = await createOrder(userData.id, body);
         return send(res, 200, o);
       }
       if (method === 'GET') {
-        var userOrders = orders.filter(function(o) { return o.userId === userData.id; }).sort(function(a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+        var userOrders = await getOrders(userData.id);
         return send(res, 200, userOrders);
       }
     }
@@ -219,14 +266,13 @@ module.exports = async function handler(req, res) {
       var userData = auth(req);
       if (!userData) return send(res, 401, { error: 'Token required' });
       var oid = parseInt(chatMatch[1]);
-      var order = orders.find(function(o) { return o.id === oid; });
+      var order = await findOrderById(oid);
       if (!order) return send(res, 404, { error: 'Pedido não encontrado' });
       if (order.userId !== userData.id && !userData.isAdmin) return send(res, 403, { error: 'Acesso negado' });
       if (method === 'POST') {
-        messages.push({ id: data.nextMsgId++, orderId: oid, userId: userData.id, text: body.text, isAdmin: userData.isAdmin ? 1 : 0, createdAt: new Date().toISOString() });
-        await saveData(data);
+        await createMessage(oid, userData.id, body.text, !!userData.isAdmin);
       }
-      var msgs = messages.filter(function(m) { return m.orderId === oid; }).sort(function(a, b) { return new Date(a.createdAt) - new Date(b.createdAt); });
+      var msgs = await getMessages(oid);
       return send(res, 200, msgs);
     }
 
@@ -235,11 +281,13 @@ module.exports = async function handler(req, res) {
       var userData = auth(req);
       if (!userData) return send(res, 401, { error: 'Token required' });
       if (!userData.isAdmin) return send(res, 403, { error: 'Admin only' });
-      var adminOrders = orders.slice().sort(function(a, b) { return new Date(b.createdAt) - new Date(a.createdAt); }).map(function(o) {
-        var u = users.find(function(u) { return u.id === o.userId; });
-        return Object.assign({}, o, { userName: u ? u.name : '', userEmail: u ? u.email : '', userPhone: u ? u.phone : '' });
-      });
-      return send(res, 200, adminOrders);
+      var allOrders = await getAllOrders();
+      var enriched = [];
+      for (var i = 0; i < allOrders.length; i++) {
+        var u = await findUserById(allOrders[i].userId);
+        enriched.push(Object.assign({}, allOrders[i], { userName: u ? u.name : '', userEmail: u ? u.email : '', userPhone: u ? u.phone : '' }));
+      }
+      return send(res, 200, enriched);
     }
 
     var statusMatch = path.match(/^\/api\/admin\/orders\/(\d+)\/status$/);
@@ -247,18 +295,18 @@ module.exports = async function handler(req, res) {
       var userData = auth(req);
       if (!userData) return send(res, 401, { error: 'Token required' });
       if (!userData.isAdmin) return send(res, 403, { error: 'Admin only' });
-      var order = orders.find(function(o) { return o.id === parseInt(statusMatch[1]); });
+      var order = await findOrderById(parseInt(statusMatch[1]));
       if (!order) return send(res, 404, { error: 'Pedido nao encontrado' });
-      order.status = body.status;
-      await saveData(data);
-      return send(res, 200, order);
+      await updateOrderStatus(order.id, body.status);
+      return send(res, 200, Object.assign({}, order, { status: body.status }));
     }
 
     if (path === '/api/admin/stats' && method === 'GET') {
       var userData = auth(req);
       if (!userData) return send(res, 401, { error: 'Token required' });
       if (!userData.isAdmin) return send(res, 403, { error: 'Admin only' });
-      return send(res, 200, { totalOrders: orders.length, totalRevenue: orders.filter(function(o) { return o.status !== 'cancelled'; }).reduce(function(s, o) { return s + o.value; }, 0), pendingOrders: orders.filter(function(o) { return o.status === 'pending'; }).length, completedOrders: orders.filter(function(o) { return o.status === 'completed'; }).length, inProgressOrders: orders.filter(function(o) { return o.status === 'in_progress'; }).length, ordersByMonth: [], ordersByType: [] });
+      var stats = await getAdminStats();
+      return send(res, 200, stats);
     }
 
     if (path === '/api/test')
