@@ -26,11 +26,32 @@ const SEED_PRODUCTS = [
 const JWT_SECRET = 'portfolio-secret-key-2024';
 const VALID_CATEGORIES = ['Mercearia', 'Hortifruit', 'Acougue', 'Padaria', 'Bebidas', 'Biscoitos', 'Higiene', 'Limpeza', 'Utilidades', 'Outros'];
 
-let nextUserId = 2, nextProductId = 23, nextOrderId = 1, nextMsgId = 1;
-let users = [{ id: 1, name: 'Administrador', email: 'admin@gmail.com', password: '45677VDTYT', phone: '', company: '', isAdmin: 1, createdAt: new Date().toISOString() }];
-let products = SEED_PRODUCTS.map(function(p, i) { return { id: i + 1, ...p, created_at: new Date().toISOString() }; });
-let orders = [];
-let messages = [];
+var now = new Date().toISOString();
+var daysAgo = function(n) { return new Date(Date.now() - n * 86400000).toISOString(); };
+
+let nextUserId = 5, nextProductId = 23, nextOrderId = 6, nextMsgId = 7;
+let users = [
+  { id: 1, name: 'Administrador', email: 'admin@gmail.com', password: '45677VDTYT', phone: '(11) 99999-0000', company: 'DevPro', isAdmin: 1, createdAt: now },
+  { id: 2, name: 'João Silva', email: 'joao@email.com', password: '123456', phone: '(11) 98888-1111', company: '', isAdmin: 0, createdAt: daysAgo(15) },
+  { id: 3, name: 'Maria Santos', email: 'maria@email.com', password: '123456', phone: '(21) 97777-2222', company: 'Tech Solutions', isAdmin: 0, createdAt: daysAgo(10) },
+  { id: 4, name: 'Pedro Oliveira', email: 'pedro@email.com', password: '123456', phone: '(31) 96666-3333', company: 'Oliveira & Cia', isAdmin: 0, createdAt: daysAgo(5) },
+];
+let products = SEED_PRODUCTS.map(function(p, i) { return { id: i + 1, ...p, created_at: now }; });
+let orders = [
+  { id: 1, userId: 2, type: 'site', description: 'Site institucional para minha padaria', name: 'João Silva', phone: '(11) 98888-1111', company: 'Padaria do João', deliveryTime: '30', features: JSON.stringify(['galeria', 'contato', 'cardapio']), value: 450, status: 'completed', createdAt: daysAgo(12) },
+  { id: 2, userId: 3, type: 'app_mobile', description: 'App para delivery de marmitas', name: 'Maria Santos', phone: '(21) 97777-2222', company: 'Marmitas Tech', deliveryTime: '45', features: JSON.stringify(['catalogo', 'carrinho', 'pagamento', 'rastreio']), value: 650, status: 'in_progress', createdAt: daysAgo(7) },
+  { id: 3, userId: 4, type: 'app_desktop', description: 'Sistema de gestão para oficina', name: 'Pedro Oliveira', phone: '(31) 96666-3333', company: 'Oliveira & Cia', deliveryTime: '60', features: JSON.stringify(['estoque', 'clientes', 'financeiro', 'relatorios']), value: 1200, status: 'pending', createdAt: daysAgo(3) },
+  { id: 4, userId: 2, type: 'site', description: 'Landing page para novo produto', name: 'João Silva', phone: '(11) 98888-1111', company: 'Padaria do João', deliveryTime: '15', features: JSON.stringify(['formulario', 'redes']), value: 450, status: 'pending', createdAt: daysAgo(1) },
+  { id: 5, userId: 3, type: 'app_mobile', description: 'Aplicativo de fidelidade', name: 'Maria Santos', phone: '(21) 97777-2222', company: 'Marmitas Tech', deliveryTime: '30', features: JSON.stringify(['login', 'pontos', 'cupons']), value: 650, status: 'completed', createdAt: daysAgo(8) },
+];
+let messages = [
+  { id: 1, orderId: 1, userId: 2, text: 'Olá, gostaria de saber o prazo para o site ficar pronto', isAdmin: 0, createdAt: daysAgo(11) },
+  { id: 2, orderId: 1, userId: 1, text: 'Olá João! Estamos finalizando os ajustes. Deve ficar pronto em 2 dias.', isAdmin: 1, createdAt: daysAgo(11) },
+  { id: 3, orderId: 1, userId: 2, text: 'Perfeito, muito obrigado!', isAdmin: 0, createdAt: daysAgo(10) },
+  { id: 4, orderId: 2, userId: 3, text: 'Oi, consigo adicionar mais uma funcionalidade?', isAdmin: 0, createdAt: daysAgo(6) },
+  { id: 5, orderId: 2, userId: 1, text: 'Claro Maria! Me diga qual funcionalidade para incluirmos.', isAdmin: 1, createdAt: daysAgo(6) },
+  { id: 6, orderId: 3, userId: 4, text: 'Bom dia! Quando posso agendar uma reunião?', isAdmin: 0, createdAt: daysAgo(2) },
+];
 
 function json(res, status, data) {
   return new Response(JSON.stringify(data), { status: status, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
