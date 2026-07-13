@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import initSqlJs from 'sql.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -10,73 +9,45 @@ const JWT_SECRET = 'portfolio-secret-key-2024';
 app.use(cors());
 app.use(express.json());
 
-function dbRun(db: any, sql: string, params: any[] = []) { db.run(sql, params); }
+type User = { id: number; name: string; email: string; password?: string; googleId?: string; phone?: string; company?: string; isAdmin: number; createdAt: string };
+type Order = { id: number; userId: number; type: string; description: string; name: string; phone: string; company?: string; deliveryTime: string; features: string; status: string; value: number; createdAt: string };
+type Message = { id: number; orderId: number; userId: number; text: string; isAdmin: number; createdAt: string };
+type Product = { id: number; name: string; description?: string; price: number; promo_price?: number | null; category: string; image?: string; is_promotion: number; stock: number; created_at: string };
 
-function dbGet(db: any, sql: string, params: any[] = []) {
-  const stmt = db.prepare(sql); stmt.bind(params);
-  if (stmt.step()) { const row = stmt.getAsObject(); stmt.free(); return row; }
-  stmt.free(); return null;
-}
+let nextUserId = 1, nextOrderId = 1, nextMsgId = 1, nextProductId = 1;
+const users: User[] = [];
+const orders: Order[] = [];
+const messages: Message[] = [];
+const products: Product[] = [];
 
-function dbAll(db: any, sql: string, params: any[] = []) {
-  const stmt = db.prepare(sql); stmt.bind(params);
-  const rows: any[] = [];
-  while (stmt.step()) rows.push(stmt.getAsObject());
-  stmt.free(); return rows;
-}
+const adminHash = bcrypt.hashSync('45677VDTYT', 10);
+users.push({ id: nextUserId++, name: 'Administrador', email: 'admin@gmail.com', password: adminHash, isAdmin: 1, createdAt: new Date().toISOString() });
 
-let dbPromise: Promise<any> | null = null;
-
-async function getDb() {
-  if (dbPromise) return dbPromise;
-  dbPromise = new Promise(async (resolve) => {
-    const SQL = await initSqlJs();
-    const db = new SQL.Database();
-    db.run(`
-      CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL, password TEXT, googleId TEXT, phone TEXT, company TEXT, isAdmin INTEGER DEFAULT 0, createdAt TEXT DEFAULT (datetime('now')));
-      CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL, type TEXT NOT NULL, description TEXT NOT NULL, name TEXT NOT NULL, phone TEXT NOT NULL, company TEXT, deliveryTime TEXT NOT NULL, features TEXT, status TEXT DEFAULT 'pending', value REAL DEFAULT 0, createdAt TEXT DEFAULT (datetime('now')), FOREIGN KEY (userId) REFERENCES users(id));
-      CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, orderId INTEGER NOT NULL, userId INTEGER NOT NULL, text TEXT NOT NULL, isAdmin INTEGER DEFAULT 0, createdAt TEXT DEFAULT (datetime('now')), FOREIGN KEY (orderId) REFERENCES orders(id), FOREIGN KEY (userId) REFERENCES users(id));
-      CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT, price REAL NOT NULL, promo_price REAL, category TEXT NOT NULL, image TEXT, is_promotion INTEGER DEFAULT 0, stock INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')));
-    `);
-    const existingAdmin = dbGet(db, 'SELECT id FROM users WHERE email = ?', ['admin@gmail.com']);
-    if (!existingAdmin) {
-      const adminHash = bcrypt.hashSync('45677VDTYT', 10);
-      dbRun(db, 'INSERT INTO users (name, email, password, isAdmin) VALUES (?, ?, ?, ?)', ['Administrador', 'admin@gmail.com', adminHash, 1]);
-    }
-    const existingProducts = dbGet(db, 'SELECT COUNT(*) as count FROM products') as any;
-    if (existingProducts.count === 0) {
-      const items = [
-        { name: 'Arroz Branco Tipo 1 - 5kg', description: 'Arroz agulhinha tipo 1, graos selecionados', price: 24.90, promo_price: 19.90, category: 'Mercearia', is_promotion: 1, stock: 50, image: '/images/arroz.png' },
-        { name: 'Feijao Carioca - 1kg', description: 'Feijao carioca tipo 1, embalagem 1kg', price: 7.50, promo_price: null, category: 'Mercearia', is_promotion: 0, stock: 80, image: '/images/feijao.png' },
-        { name: 'Oleo de Soja - 900ml', description: 'Oleo de soja refinado, 900ml', price: 6.80, promo_price: 4.99, category: 'Mercearia', is_promotion: 1, stock: 100, image: '/images/oleo-soja.png' },
-        { name: 'Acucar Cristal - 2kg', description: 'Acucar cristal refinado, pacote 2kg', price: 9.90, promo_price: null, category: 'Mercearia', is_promotion: 0, stock: 60, image: '/images/acucar.png' },
-        { name: 'Cafe Torrado Mo - 500g', description: 'Cafe torrado moido premium, 500g', price: 15.90, promo_price: 12.90, category: 'Mercearia', is_promotion: 1, stock: 40, image: '/images/cafe.png' },
-        { name: 'Macarrao Espaguete - 500g', description: 'Macarrao espaguete grano duro, 500g', price: 4.50, promo_price: null, category: 'Mercearia', is_promotion: 0, stock: 90, image: '/images/macarrao.png' },
-        { name: 'Detergente Liquido - 500ml', description: 'Detergente liquido neutro, 500ml', price: 3.20, promo_price: 2.50, category: 'Limpeza', is_promotion: 1, stock: 120, image: '/images/detergente.png' },
-        { name: 'Agua Sanitaria - 1L', description: 'Agua sanitaria para limpeza geral, 1L', price: 4.90, promo_price: null, category: 'Limpeza', is_promotion: 0, stock: 70, image: '/images/agua-sanitaria.png' },
-        { name: 'Sabao em Po - 1kg', description: 'Sabao em po para lavar roupas, 1kg', price: 12.50, promo_price: 9.90, category: 'Limpeza', is_promotion: 1, stock: 45, image: '/images/sabao-po.png' },
-        { name: 'Desinfetante - 500ml', description: 'Desinfetante perfumado, 500ml', price: 5.50, promo_price: null, category: 'Limpeza', is_promotion: 0, stock: 60, image: '/images/desinfetante.png' },
-        { name: 'Shampoo - 350ml', description: 'Shampoo para todos os tipos de cabelo', price: 18.90, promo_price: 14.90, category: 'Higiene', is_promotion: 1, stock: 35, image: '/images/shampoo.png' },
-        { name: 'Sabonete - 90g', description: 'Sabonete hidratante, 90g', price: 3.50, promo_price: 2.99, category: 'Higiene', is_promotion: 1, stock: 150, image: '/images/sabonete.png' },
-        { name: 'Creme Dental - 90g', description: 'Creme dental com fluor, 90g', price: 6.90, promo_price: null, category: 'Higiene', is_promotion: 0, stock: 80, image: '/images/creme-dental.png' },
-        { name: 'Papel Higienico - 4 rolos', description: 'Papel higienico folha dupla, 4 rolos', price: 8.90, promo_price: 6.90, category: 'Higiene', is_promotion: 1, stock: 100, image: '/images/papel-higienico.png' },
-        { name: 'Biscoito Recheado - 140g', description: 'Biscoito recheado sabor chocolate', price: 3.80, promo_price: null, category: 'Biscoitos', is_promotion: 0, stock: 200, image: '/images/biscoito-recheado.png' },
-        { name: 'Salgadinho de Milho - 80g', description: 'Salgadinho de milho sabor queijo', price: 4.50, promo_price: 3.50, category: 'Biscoitos', is_promotion: 1, stock: 120, image: '/images/salgadinho.png' },
-        { name: 'Bolacha Agua e Sal - 200g', description: 'Bolacha agua e sal tradicional', price: 3.20, promo_price: null, category: 'Biscoitos', is_promotion: 0, stock: 90, image: '/images/bolacha-agua-sal.png' },
-        { name: 'Biscoito Maizena - 200g', description: 'Biscoito maizena tradicional', price: 4.20, promo_price: 3.20, category: 'Biscoitos', is_promotion: 1, stock: 75, image: '/images/biscoito-maizena.png' },
-        { name: 'Patinho Moido - 500g', description: 'Patinho moido fresco, bandeja 500g', price: 22.90, promo_price: 19.90, category: 'Acougue', is_promotion: 1, stock: 25, image: '/images/patinho-moido.png' },
-        { name: 'Peito de Frango - 1kg', description: 'Peito de frango resfriado, 1kg', price: 16.90, promo_price: null, category: 'Acougue', is_promotion: 0, stock: 30, image: '/images/peito-frango.png' },
-        { name: 'Costela Bovina - 1kg', description: 'Costela bovina para cozido, 1kg', price: 28.90, promo_price: 24.90, category: 'Acougue', is_promotion: 1, stock: 15, image: '/images/costela-bovina.png' },
-        { name: 'Linguica Calabresa - 500g', description: 'Linguica calabresa defumada, 500g', price: 14.90, promo_price: null, category: 'Acougue', is_promotion: 0, stock: 40, image: '/images/linguica-calabresa.png' },
-      ];
-      const stmt = db.prepare('INSERT INTO products (name, description, price, promo_price, category, image, is_promotion, stock) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-      for (const item of items) { stmt.run([item.name, item.description, item.price, item.promo_price, item.category, item.image, item.is_promotion, item.stock]); }
-      stmt.free();
-    }
-    resolve(db);
-  });
-  return dbPromise;
-}
+const seedProducts: Omit<Product, 'id'>[] = [
+  { name: 'Arroz Branco Tipo 1 - 5kg', description: 'Arroz agulhinha tipo 1, graos selecionados', price: 24.90, promo_price: 19.90, category: 'Mercearia', is_promotion: 1, stock: 50, image: '/images/arroz.png', created_at: new Date().toISOString() },
+  { name: 'Feijao Carioca - 1kg', description: 'Feijao carioca tipo 1, embalagem 1kg', price: 7.50, promo_price: null, category: 'Mercearia', is_promotion: 0, stock: 80, image: '/images/feijao.png', created_at: new Date().toISOString() },
+  { name: 'Oleo de Soja - 900ml', description: 'Oleo de soja refinado, 900ml', price: 6.80, promo_price: 4.99, category: 'Mercearia', is_promotion: 1, stock: 100, image: '/images/oleo-soja.png', created_at: new Date().toISOString() },
+  { name: 'Acucar Cristal - 2kg', description: 'Acucar cristal refinado, pacote 2kg', price: 9.90, promo_price: null, category: 'Mercearia', is_promotion: 0, stock: 60, image: '/images/acucar.png', created_at: new Date().toISOString() },
+  { name: 'Cafe Torrado Mo - 500g', description: 'Cafe torrado moido premium, 500g', price: 15.90, promo_price: 12.90, category: 'Mercearia', is_promotion: 1, stock: 40, image: '/images/cafe.png', created_at: new Date().toISOString() },
+  { name: 'Macarrao Espaguete - 500g', description: 'Macarrao espaguete grano duro, 500g', price: 4.50, promo_price: null, category: 'Mercearia', is_promotion: 0, stock: 90, image: '/images/macarrao.png', created_at: new Date().toISOString() },
+  { name: 'Detergente Liquido - 500ml', description: 'Detergente liquido neutro, 500ml', price: 3.20, promo_price: 2.50, category: 'Limpeza', is_promotion: 1, stock: 120, image: '/images/detergente.png', created_at: new Date().toISOString() },
+  { name: 'Agua Sanitaria - 1L', description: 'Agua sanitaria para limpeza geral, 1L', price: 4.90, promo_price: null, category: 'Limpeza', is_promotion: 0, stock: 70, image: '/images/agua-sanitaria.png', created_at: new Date().toISOString() },
+  { name: 'Sabao em Po - 1kg', description: 'Sabao em po para lavar roupas, 1kg', price: 12.50, promo_price: 9.90, category: 'Limpeza', is_promotion: 1, stock: 45, image: '/images/sabao-po.png', created_at: new Date().toISOString() },
+  { name: 'Desinfetante - 500ml', description: 'Desinfetante perfumado, 500ml', price: 5.50, promo_price: null, category: 'Limpeza', is_promotion: 0, stock: 60, image: '/images/desinfetante.png', created_at: new Date().toISOString() },
+  { name: 'Shampoo - 350ml', description: 'Shampoo para todos os tipos de cabelo', price: 18.90, promo_price: 14.90, category: 'Higiene', is_promotion: 1, stock: 35, image: '/images/shampoo.png', created_at: new Date().toISOString() },
+  { name: 'Sabonete - 90g', description: 'Sabonete hidratante, 90g', price: 3.50, promo_price: 2.99, category: 'Higiene', is_promotion: 1, stock: 150, image: '/images/sabonete.png', created_at: new Date().toISOString() },
+  { name: 'Creme Dental - 90g', description: 'Creme dental com fluor, 90g', price: 6.90, promo_price: null, category: 'Higiene', is_promotion: 0, stock: 80, image: '/images/creme-dental.png', created_at: new Date().toISOString() },
+  { name: 'Papel Higienico - 4 rolos', description: 'Papel higienico folha dupla, 4 rolos', price: 8.90, promo_price: 6.90, category: 'Higiene', is_promotion: 1, stock: 100, image: '/images/papel-higienico.png', created_at: new Date().toISOString() },
+  { name: 'Biscoito Recheado - 140g', description: 'Biscoito recheado sabor chocolate', price: 3.80, promo_price: null, category: 'Biscoitos', is_promotion: 0, stock: 200, image: '/images/biscoito-recheado.png', created_at: new Date().toISOString() },
+  { name: 'Salgadinho de Milho - 80g', description: 'Salgadinho de milho sabor queijo', price: 4.50, promo_price: 3.50, category: 'Biscoitos', is_promotion: 1, stock: 120, image: '/images/salgadinho.png', created_at: new Date().toISOString() },
+  { name: 'Bolacha Agua e Sal - 200g', description: 'Bolacha agua e sal tradicional', price: 3.20, promo_price: null, category: 'Biscoitos', is_promotion: 0, stock: 90, image: '/images/bolacha-agua-sal.png', created_at: new Date().toISOString() },
+  { name: 'Biscoito Maizena - 200g', description: 'Biscoito maizena tradicional', price: 4.20, promo_price: 3.20, category: 'Biscoitos', is_promotion: 1, stock: 75, image: '/images/biscoito-maizena.png', created_at: new Date().toISOString() },
+  { name: 'Patinho Moido - 500g', description: 'Patinho moido fresco, bandeja 500g', price: 22.90, promo_price: 19.90, category: 'Acougue', is_promotion: 1, stock: 25, image: '/images/patinho-moido.png', created_at: new Date().toISOString() },
+  { name: 'Peito de Frango - 1kg', description: 'Peito de frango resfriado, 1kg', price: 16.90, promo_price: null, category: 'Acougue', is_promotion: 0, stock: 30, image: '/images/peito-frango.png', created_at: new Date().toISOString() },
+  { name: 'Costela Bovina - 1kg', description: 'Costela bovina para cozido, 1kg', price: 28.90, promo_price: 24.90, category: 'Acougue', is_promotion: 1, stock: 15, image: '/images/costela-bovina.png', created_at: new Date().toISOString() },
+  { name: 'Linguica Calabresa - 500g', description: 'Linguica calabresa defumada, 500g', price: 14.90, promo_price: null, category: 'Acougue', is_promotion: 0, stock: 40, image: '/images/linguica-calabresa.png', created_at: new Date().toISOString() },
+];
+for (const p of seedProducts) { products.push({ id: nextProductId++, ...p }); }
 
 function auth(req: any, res: any, next: any) {
   const token = req.headers.authorization?.split(' ')[1];
@@ -89,22 +60,14 @@ function adminAuth(req: any, res: any, next: any) {
   auth(req, res, () => { if (!req.user.isAdmin) return res.status(403).json({ error: 'Admin only' }); next(); });
 }
 
-async function getDbWithMiddleware(req: any, res: any, next: any) {
-  req.db = await getDb();
-  next();
-}
-
-app.use(getDbWithMiddleware);
-
 app.post('/api/auth/register', (req: any, res) => {
   const { name, email, password, phone, company } = req.body;
   try {
-    const existing = dbGet(req.db, 'SELECT id FROM users WHERE email = ?', [email]);
-    if (existing) return res.status(400).json({ error: 'Email já cadastrado' });
+    if (users.find(u => u.email === email)) return res.status(400).json({ error: 'Email já cadastrado' });
     const hashedPassword = bcrypt.hashSync(password, 10);
     const isAdmin = email.toLowerCase() === 'admin@gmail.com' ? 1 : 0;
-    dbRun(req.db, 'INSERT INTO users (name, email, password, phone, company, isAdmin) VALUES (?, ?, ?, ?, ?, ?)', [name, email, hashedPassword, phone || '', company || '', isAdmin]);
-    const user = dbGet(req.db, 'SELECT * FROM users WHERE email = ?', [email]) as any;
+    const user: User = { id: nextUserId++, name, email, password: hashedPassword, phone: phone || '', company: company || '', isAdmin, createdAt: new Date().toISOString() };
+    users.push(user);
     const token = jwt.sign({ id: user.id, email: user.email, name: user.name, isAdmin: user.isAdmin }, JWT_SECRET);
     res.json({ token, user: { id: user.id, name: user.name, email: user.email, isAdmin: !!user.isAdmin } });
   } catch (e: any) { res.status(400).json({ error: e.message }); }
@@ -112,7 +75,7 @@ app.post('/api/auth/register', (req: any, res) => {
 
 app.post('/api/auth/login', (req: any, res) => {
   const { email, password } = req.body;
-  const user = dbGet(req.db, 'SELECT * FROM users WHERE email = ?', [email]) as any;
+  const user = users.find(u => u.email === email);
   if (!user || !user.password) return res.status(400).json({ error: 'Credenciais inválidas' });
   if (!bcrypt.compareSync(password, user.password)) return res.status(400).json({ error: 'Credenciais inválidas' });
   const token = jwt.sign({ id: user.id, email: user.email, name: user.name, isAdmin: user.isAdmin }, JWT_SECRET);
@@ -122,11 +85,11 @@ app.post('/api/auth/login', (req: any, res) => {
 app.post('/api/auth/google', (req: any, res) => {
   const { email, name, googleId } = req.body;
   try {
-    let user = dbGet(req.db, 'SELECT * FROM users WHERE email = ?', [email]) as any;
+    let user = users.find(u => u.email === email);
     if (!user) {
       const isAdmin = email.toLowerCase() === 'admin@gmail.com' ? 1 : 0;
-      dbRun(req.db, 'INSERT INTO users (name, email, googleId, isAdmin) VALUES (?, ?, ?, ?)', [name, email, googleId, isAdmin]);
-      user = dbGet(req.db, 'SELECT * FROM users WHERE email = ?', [email]) as any;
+      user = { id: nextUserId++, name, email, googleId, isAdmin, createdAt: new Date().toISOString() };
+      users.push(user);
     }
     const token = jwt.sign({ id: user.id, email: user.email, name: user.name, isAdmin: user.isAdmin }, JWT_SECRET);
     res.json({ token, user: { id: user.id, name: user.name, email: user.email, isAdmin: !!user.isAdmin } });
@@ -134,26 +97,27 @@ app.post('/api/auth/google', (req: any, res) => {
 });
 
 app.get('/api/auth/me', auth, (req: any, res) => {
-  const user = dbGet(req.db, 'SELECT id, name, email, phone, company, isAdmin FROM users WHERE id = ?', [req.user.id]);
-  res.json(user);
+  const user = users.find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json({ id: user.id, name: user.name, email: user.email, phone: user.phone, company: user.company, isAdmin: user.isAdmin });
 });
 
 app.post('/api/orders', auth, (req: any, res) => {
   const { type, description, name, phone, company, deliveryTime, features } = req.body;
   const values: Record<string, number> = { site: 450, app_mobile: 650, app_desktop: 1200 };
   const value = values[type] || 0;
-  dbRun(req.db, 'INSERT INTO orders (userId, type, description, name, phone, company, deliveryTime, features, value) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [req.user.id, type, description, name, phone, company || '', deliveryTime, JSON.stringify(features || []), value]);
-  const orders = dbAll(req.db, 'SELECT * FROM orders WHERE userId = ? ORDER BY id DESC LIMIT 1', [req.user.id]);
-  res.json(orders[0]);
+  const order: Order = { id: nextOrderId++, userId: req.user.id, type, description, name, phone, company: company || '', deliveryTime, features: JSON.stringify(features || []), value, status: 'pending', createdAt: new Date().toISOString() };
+  orders.push(order);
+  res.json(order);
 });
 
 app.get('/api/orders', auth, (req: any, res) => {
-  const orders = dbAll(req.db, 'SELECT * FROM orders WHERE userId = ? ORDER BY createdAt DESC', [req.user.id]);
-  res.json(orders);
+  const userOrders = orders.filter(o => o.userId === req.user.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  res.json(userOrders);
 });
 
 app.get('/api/orders/:id', auth, (req: any, res) => {
-  const order = dbGet(req.db, 'SELECT * FROM orders WHERE id = ?', [Number(req.params.id)]);
+  const order = orders.find(o => o.id === Number(req.params.id));
   if (!order) return res.status(404).json({ error: 'Pedido não encontrado' });
   res.json(order);
 });
@@ -161,24 +125,21 @@ app.get('/api/orders/:id', auth, (req: any, res) => {
 const validCategories = ['Mercearia', 'Hortifruit', 'Acougue', 'Padaria', 'Bebidas', 'Biscoitos', 'Higiene', 'Limpeza', 'Utilidades', 'Outros'];
 
 app.get('/api/products', (_req: any, res) => {
-  const products = dbAll(_req.db, 'SELECT * FROM products ORDER BY created_at DESC');
-  res.json(products);
+  res.json([...products].reverse());
 });
 
 app.get('/api/products/promotions', (_req: any, res) => {
-  const products = dbAll(_req.db, 'SELECT * FROM products WHERE is_promotion = 1 ORDER BY created_at DESC');
-  res.json(products);
+  res.json(products.filter(p => p.is_promotion === 1).reverse());
 });
 
 app.get('/api/products/category/:category', (req: any, res) => {
   const { category } = req.params;
   if (!validCategories.includes(category)) return res.status(400).json({ error: 'Categoria invalida' });
-  const products = dbAll(req.db, 'SELECT * FROM products WHERE category = ? ORDER BY created_at DESC', [category]);
-  res.json(products);
+  res.json(products.filter(p => p.category === category).reverse());
 });
 
 app.get('/api/products/:id', (req: any, res) => {
-  const product = dbGet(req.db, 'SELECT * FROM products WHERE id = ?', [Number(req.params.id)]);
+  const product = products.find(p => p.id === Number(req.params.id));
   if (!product) return res.status(404).json({ error: 'Produto nao encontrado' });
   res.json(product);
 });
@@ -186,73 +147,85 @@ app.get('/api/products/:id', (req: any, res) => {
 app.post('/api/products', adminAuth, (req: any, res) => {
   const { name, description, price, promo_price, category, image, is_promotion, stock } = req.body;
   if (!name || !price || !category) return res.status(400).json({ error: 'Nome, preco e categoria sao obrigatorios' });
-  dbRun(req.db, 'INSERT INTO products (name, description, price, promo_price, category, image, is_promotion, stock) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [name, description || '', price, promo_price || null, category, image || '', is_promotion ? 1 : 0, stock || 0]);
-  const product = dbGet(req.db, 'SELECT * FROM products WHERE id = ?', [(req.db as any).exec("SELECT MAX(id) as id FROM products")[0].values[0][0]]);
+  const product: Product = { id: nextProductId++, name, description: description || '', price, promo_price: promo_price || null, category, image: image || '', is_promotion: is_promotion ? 1 : 0, stock: stock || 0, created_at: new Date().toISOString() };
+  products.push(product);
   res.status(201).json(product);
 });
 
 app.put('/api/products/:id', adminAuth, (req: any, res) => {
-  const existing = dbGet(req.db, 'SELECT * FROM products WHERE id = ?', [Number(req.params.id)]);
+  const existing = products.find(p => p.id === Number(req.params.id));
   if (!existing) return res.status(404).json({ error: 'Produto nao encontrado' });
-  const c = existing as any;
   const { name, description, price, promo_price, category, image, is_promotion, stock } = req.body;
-  dbRun(req.db, 'UPDATE products SET name=?, description=?, price=?, promo_price=?, category=?, image=?, is_promotion=?, stock=? WHERE id=?',
-    [name ?? c.name, description !== undefined ? description : c.description, price ?? c.price,
-     promo_price !== undefined ? promo_price : c.promo_price, category ?? c.category,
-     image !== undefined ? image : c.image, is_promotion !== undefined ? (is_promotion ? 1 : 0) : c.is_promotion,
-     stock !== undefined ? stock : c.stock, Number(req.params.id)]);
-  const updated = dbGet(req.db, 'SELECT * FROM products WHERE id = ?', [Number(req.params.id)]);
-  res.json(updated);
+  Object.assign(existing, {
+    name: name ?? existing.name,
+    description: description !== undefined ? description : existing.description,
+    price: price ?? existing.price,
+    promo_price: promo_price !== undefined ? promo_price : existing.promo_price,
+    category: category ?? existing.category,
+    image: image !== undefined ? image : existing.image,
+    is_promotion: is_promotion !== undefined ? (is_promotion ? 1 : 0) : existing.is_promotion,
+    stock: stock !== undefined ? stock : existing.stock,
+  });
+  res.json(existing);
 });
 
 app.delete('/api/products/:id', adminAuth, (req: any, res) => {
-  const existing = dbGet(req.db, 'SELECT * FROM products WHERE id = ?', [Number(req.params.id)]);
-  if (!existing) return res.status(404).json({ error: 'Produto nao encontrado' });
-  dbRun(req.db, 'DELETE FROM products WHERE id = ?', [Number(req.params.id)]);
+  const idx = products.findIndex(p => p.id === Number(req.params.id));
+  if (idx === -1) return res.status(404).json({ error: 'Produto nao encontrado' });
+  products.splice(idx, 1);
   res.json({ message: 'Produto removido com sucesso' });
 });
 
-app.get('/api/admin/orders', adminAuth, (req: any, res) => {
-  const orders = dbAll(req.db, 'SELECT o.*, u.name as userName, u.email as userEmail, u.phone as userPhone FROM orders o JOIN users u ON o.userId = u.id ORDER BY o.createdAt DESC');
-  res.json(orders);
+app.get('/api/admin/orders', adminAuth, (_req: any, res) => {
+  const adminOrders = [...orders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(o => {
+    const u = users.find(user => user.id === o.userId);
+    return { ...o, userName: u?.name || '', userEmail: u?.email || '', userPhone: u?.phone || '' };
+  });
+  res.json(adminOrders);
 });
 
 app.put('/api/admin/orders/:id/status', adminAuth, (req: any, res) => {
-  const { status } = req.body;
-  dbRun(req.db, 'UPDATE orders SET status = ? WHERE id = ?', [status, Number(req.params.id)]);
-  const order = dbGet(req.db, 'SELECT * FROM orders WHERE id = ?', [Number(req.params.id)]);
+  const order = orders.find(o => o.id === Number(req.params.id));
+  if (!order) return res.status(404).json({ error: 'Pedido nao encontrado' });
+  order.status = req.body.status;
   res.json(order);
 });
 
-app.get('/api/admin/stats', adminAuth, (req: any, res) => {
-  const totalOrders = (dbGet(req.db, 'SELECT COUNT(*) as count FROM orders') as any).count;
-  const totalRevenue = (dbGet(req.db, 'SELECT COALESCE(SUM(value), 0) as total FROM orders WHERE status != ?', ['cancelled']) as any).total;
-  const pendingOrders = (dbGet(req.db, 'SELECT COUNT(*) as count FROM orders WHERE status = ?', ['pending']) as any).count;
-  const completedOrders = (dbGet(req.db, 'SELECT COUNT(*) as count FROM orders WHERE status = ?', ['completed']) as any).count;
-  const inProgressOrders = (dbGet(req.db, 'SELECT COUNT(*) as count FROM orders WHERE status = ?', ['in_progress']) as any).count;
-  const ordersByMonth = dbAll(req.db, "SELECT strftime('%m', createdAt) as month, COUNT(*) as count, COALESCE(SUM(value), 0) as revenue FROM orders GROUP BY strftime('%m', createdAt) ORDER BY month");
-  const ordersByType = dbAll(req.db, 'SELECT type, COUNT(*) as count, COALESCE(SUM(value), 0) as revenue FROM orders GROUP BY type');
+app.get('/api/admin/stats', adminAuth, (_req: any, res) => {
+  const totalOrders = orders.length;
+  const totalRevenue = orders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + o.value, 0);
+  const pendingOrders = orders.filter(o => o.status === 'pending').length;
+  const completedOrders = orders.filter(o => o.status === 'completed').length;
+  const inProgressOrders = orders.filter(o => o.status === 'in_progress').length;
+  const ordersByMonth = Array.from({ length: 12 }, (_, i) => {
+    const month = String(i + 1).padStart(2, '0');
+    const monthOrders = orders.filter(o => o.createdAt?.startsWith(`202${i >= new Date().getMonth() ? 4 : 5}-${month}`) || o.createdAt?.includes(`-${month}-`));
+    return { month, count: monthOrders.length, revenue: monthOrders.reduce((s, o) => s + o.value, 0) };
+  }).filter(m => m.count > 0 || m.revenue > 0);
+  const ordersByType = [...new Set(orders.map(o => o.type))].map(type => {
+    const typeOrders = orders.filter(o => o.type === type);
+    return { type, count: typeOrders.length, revenue: typeOrders.reduce((s, o) => s + o.value, 0) };
+  });
   res.json({ totalOrders, totalRevenue, pendingOrders, completedOrders, inProgressOrders, ordersByMonth, ordersByType });
 });
 
 app.get('/api/chat/:orderId', auth, (req: any, res) => {
-  const order = dbGet(req.db, 'SELECT * FROM orders WHERE id = ?', [Number(req.params.id)]) as any;
+  const order = orders.find(o => o.id === Number(req.params.orderId));
   if (!order) return res.status(404).json({ error: 'Pedido não encontrado' });
   if (order.userId !== req.user.id && !req.user.isAdmin) return res.status(403).json({ error: 'Acesso negado' });
-  const messages = dbAll(req.db, 'SELECT * FROM messages WHERE orderId = ? ORDER BY createdAt ASC', [Number(req.params.id)]);
-  res.json(messages);
+  const chatMessages = messages.filter(m => m.orderId === Number(req.params.orderId)).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  res.json(chatMessages);
 });
 
 app.post('/api/chat/:orderId', auth, (req: any, res) => {
   const { text } = req.body;
-  const order = dbGet(req.db, 'SELECT * FROM orders WHERE id = ?', [Number(req.params.id)]) as any;
+  const order = orders.find(o => o.id === Number(req.params.orderId));
   if (!order) return res.status(404).json({ error: 'Pedido não encontrado' });
   if (order.userId !== req.user.id && !req.user.isAdmin) return res.status(403).json({ error: 'Acesso negado' });
   const isAdmin = req.user.isAdmin ? 1 : 0;
-  dbRun(req.db, 'INSERT INTO messages (orderId, userId, text, isAdmin) VALUES (?, ?, ?, ?)', [Number(req.params.id), req.user.id, text, isAdmin]);
-  const messages = dbAll(req.db, 'SELECT * FROM messages WHERE orderId = ? ORDER BY createdAt ASC', [Number(req.params.id)]);
-  res.json(messages);
+  messages.push({ id: nextMsgId++, orderId: Number(req.params.orderId), userId: req.user.id, text, isAdmin, createdAt: new Date().toISOString() });
+  const chatMessages = messages.filter(m => m.orderId === Number(req.params.orderId)).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  res.json(chatMessages);
 });
 
 export default app;

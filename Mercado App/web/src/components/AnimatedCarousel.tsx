@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 
+const base = import.meta.env.BASE_URL;
 const items = [
-  { image: '/images/FitaMerceria.png', label: 'Mercearia' },
-  { image: '/images/FitaHortifruit.png', label: 'Hortifruti' },
-  { image: '/images/FitaAçougue.png', label: 'Acougue' },
-  { image: '/images/FitaBebidas.png', label: 'Bebidas' },
-  { image: '/images/FitaHegiene.png', label: 'Higiene' },
-  { image: '/images/FitaLimpeza.png', label: 'Limpeza' },
+  { image: `${base}images/FitaMerceria.png`, label: 'Mercearia' },
+  { image: `${base}images/FitaHortifruit.png`, label: 'Hortifruti' },
+  { image: `${base}images/FitaAçougue.png`, label: 'Acougue' },
+  { image: `${base}images/FitaBebidas.png`, label: 'Bebidas' },
+  { image: `${base}images/FitaHegiene.png`, label: 'Higiene' },
+  { image: `${base}images/FitaLimpeza.png`, label: 'Limpeza' },
 ];
 
 export default function AnimatedCarousel() {

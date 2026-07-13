@@ -5,6 +5,8 @@ interface Props {
   products: Product[];
 }
 
+const base = import.meta.env.BASE_URL;
+
 export default function PromoBanner({ products }: Props) {
   const [currentPromo, setCurrentPromo] = useState(0);
 
@@ -63,10 +65,10 @@ export default function PromoBanner({ products }: Props) {
                       <div key={idx} className="min-w-full flex items-center gap-4 p-3">
                         <div className="w-24 h-24 bg-white/20 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
                           <img
-                            src={promo.image ? `http://localhost:3001${promo.image}` : '/images/arroz.jpg'}
+                            src={promo.image ? `${base}${promo.image.replace(/^\//, '')}` : `${base}images/arroz.jpg`}
                             alt={promo.name}
                             className="w-full h-full object-contain"
-                            onError={(e) => { (e.target as HTMLImageElement).src = '/images/arroz.jpg'; }}
+                            onError={(e) => { (e.target as HTMLImageElement).src = `${base}images/arroz.jpg`; }}
                           />
                         </div>
                         <div className="flex-1 min-w-0">
