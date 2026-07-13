@@ -1,8 +1,13 @@
 {
+  "framework": null,
+  "buildCommand": "npx vite build",
+  "outputDirectory": "dist",
   "functions": {
     "api/index.cjs": { "runtime": "@vercel/node@3" }
   },
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.cjs?__path=/api/$1" }
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/index.cjs?__path=/api/$1" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
