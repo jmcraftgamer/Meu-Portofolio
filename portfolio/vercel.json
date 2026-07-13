@@ -1,7 +1,4 @@
 {
-  "framework": null,
-  "buildCommand": "npx vite build",
-  "outputDirectory": "dist",
   "functions": {
     "api/index.cjs": { "runtime": "@vercel/node@3" }
   },
