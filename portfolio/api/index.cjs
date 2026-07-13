@@ -68,7 +68,8 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    var url = new URL(req.url, 'http://localhost');
+    var originalUrl = req.headers['x-vercel-forwarded-url'] || req.url;
+    var url = new URL(originalUrl, 'http://localhost');
     var path = url.pathname;
     var method = req.method;
     var body = method !== 'GET' ? await parseBody(req) : {};
