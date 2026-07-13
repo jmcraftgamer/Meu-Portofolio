@@ -4,9 +4,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        gold: '#FF0000',
-        'gold-dark': '#CC0000',
-        'gold-light': '#FF3333',
+        gold: '#FFD700',
+        'gold-dark': '#B8860B',
+        'gold-light': '#FFF44F',
         dark: {
           50: '#1a1a1a',
           100: '#151515',
@@ -32,8 +32,8 @@ export default {
           '50%': { transform: 'translateY(-20px)' },
         },
         glow: {
-          '0%': { boxShadow: '0 0 5px rgba(255,0,0,0.2), 0 0 10px rgba(255,0,0,0.2)' },
-          '100%': { boxShadow: '0 0 10px rgba(255,0,0,0.4), 0 0 20px rgba(255,0,0,0.4), 0 0 40px rgba(255,0,0,0.2)' },
+          '0%': { boxShadow: '0 0 5px rgba(255,215,0,0.2), 0 0 10px rgba(255,215,0,0.2)' },
+          '100%': { boxShadow: '0 0 10px rgba(255,215,0,0.4), 0 0 20px rgba(255,215,0,0.4), 0 0 40px rgba(255,215,0,0.2)' },
         }
       }
     },

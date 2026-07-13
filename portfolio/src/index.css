@@ -10,26 +10,26 @@
   }
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: #0a0a0a; }
-  ::-webkit-scrollbar-thumb { background: #FF0000; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: #FFD700; border-radius: 3px; }
 }
 
 @layer utilities {
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-red-500 via-gold to-red-300;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 via-gold to-yellow-200;
   }
   .glow-gold {
-    box-shadow: 0 0 15px rgba(255,0,0,0.3), 0 0 30px rgba(255,0,0,0.1);
+    box-shadow: 0 0 15px rgba(255,215,0,0.3), 0 0 30px rgba(255,215,0,0.1);
   }
   .glow-gold-sm {
-    box-shadow: 0 0 10px rgba(255,0,0,0.2);
+    box-shadow: 0 0 10px rgba(255,215,0,0.2);
   }
   .bg-glass {
     background: rgba(255,255,255,0.03);
     backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,0,0,0.1);
+    border: 1px solid rgba(255,215,0,0.1);
   }
   .bg-glass-hover:hover {
     background: rgba(255,255,255,0.06);
-    border-color: rgba(255,0,0,0.3);
+    border-color: rgba(255,215,0,0.3);
   }
 }
