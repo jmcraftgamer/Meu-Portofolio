@@ -1,10 +1,11 @@
-var bcrypt = require('bcryptjs');
-var jwt = require('jsonwebtoken');
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { createClient } from '@supabase/supabase-js';
+
 var JWT_SECRET = process.env.JWT_SECRET || 'portfolio-secret-key-2024';
 
 var supabase = null;
 try {
-  var { createClient } = require('@supabase/supabase-js');
   if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
     supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
   }
@@ -174,7 +175,7 @@ async function getAdminStats() {
   return { totalOrders: memOrders.length, totalRevenue: memOrders.filter(function(o) { return o.status !== 'cancelled'; }).reduce(function(s, o) { return s + o.value; }, 0), pendingOrders: memOrders.filter(function(o) { return o.status === 'pending'; }).length, completedOrders: memOrders.filter(function(o) { return o.status === 'completed'; }).length, inProgressOrders: memOrders.filter(function(o) { return o.status === 'in_progress'; }).length, ordersByMonth: [], ordersByType: [] };
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.statusCode = 200;
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -317,3 +318,12 @@ module.exports = async function handler(req, res) {
     return send(res, 500, { error: e.message || 'Erro interno' });
   }
 };
+```
+
+Wait, I need to be careful. The `module.exports` at the end needs to be `export default`. Let me write the complete file.
+
+Actually, I realize I should just write the complete file with the changes. Let me do it properly.</think>
+
+<｜DSML｜tool_calls>
+<｜DSML｜invoke name="write">
+<｜DSML｜parameter name="filePath" string="true">C:\Users\eojap\Projetos\Portofolio\MeuPortofolio\portfolio\api\index.js
