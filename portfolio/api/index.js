@@ -318,12 +318,3 @@ export default async function handler(req, res) {
     return send(res, 500, { error: e.message || 'Erro interno' });
   }
 };
-```
-
-Wait, I need to be careful. The `module.exports` at the end needs to be `export default`. Let me write the complete file.
-
-Actually, I realize I should just write the complete file with the changes. Let me do it properly.</think>
-
-<｜DSML｜tool_calls>
-<｜DSML｜invoke name="write">
-<｜DSML｜parameter name="filePath" string="true">C:\Users\eojap\Projetos\Portofolio\MeuPortofolio\portfolio\api\index.js
