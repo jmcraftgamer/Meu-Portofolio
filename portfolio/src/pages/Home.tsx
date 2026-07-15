@@ -48,10 +48,11 @@ export default function Home() {
                 <span className="text-gold font-semibold"> ser a melhor da sua região</span>.
               </p>
               <div className="flex flex-wrap gap-4">
-                <Link to="/order" className="group px-8 py-4 bg-gradient-to-r from-yellow-500 to-gold text-black font-bold rounded-xl text-lg hover:shadow-lg hover:shadow-gold/20 transition-all flex items-center gap-2">
-                  Fazer um Pedido
+                <a href="https://www.instagram.com/devpro737/" target="_blank" rel="noopener noreferrer"
+                  className="group px-8 py-4 bg-gradient-to-r from-yellow-500 to-gold text-black font-bold rounded-xl text-lg hover:shadow-lg hover:shadow-gold/20 transition-all flex items-center gap-2">
+                  Fale Conosco
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
+                </a>
                 <Link to="/testar" className="group px-8 py-4 border border-gold/30 text-gold font-bold rounded-xl text-lg hover:bg-gold/10 transition-all flex items-center gap-2">
                   Testar Apps
                   <Smartphone className="w-5 h-5 group-hover:scale-110 transition-transform" />
@@ -244,15 +245,15 @@ export default function Home() {
                       </li>
                     ))}
                   </ul>
-                  <Link to="/order"
+                  <a href="https://www.instagram.com/devpro737/" target="_blank" rel="noopener noreferrer"
                     className={`block w-full py-3 rounded-xl text-center font-bold transition-all ${
                       plan.popular
                         ? 'bg-gradient-to-r from-yellow-500 to-gold text-black hover:shadow-lg hover:shadow-gold/20'
                         : 'border border-gold/30 text-gold hover:bg-gold/10'
                     }`}
                   >
-                    Contratar Agora
-                  </Link>
+                    Fale Conosco
+                  </a>
                 </div>
               </motion.div>
             ))}
@@ -322,10 +323,11 @@ export default function Home() {
               para seus clientes. <span className="text-gold font-semibold">Venda mais, cresça mais, seja mais.</span>
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link to="/order" className="group px-8 py-4 bg-gradient-to-r from-yellow-500 to-gold text-black font-bold rounded-xl text-lg hover:shadow-lg hover:shadow-gold/20 transition-all flex items-center gap-2">
-                Fazer Pedido Agora
+              <a href="https://www.instagram.com/devpro737/" target="_blank" rel="noopener noreferrer"
+                className="group px-8 py-4 bg-gradient-to-r from-yellow-500 to-gold text-black font-bold rounded-xl text-lg hover:shadow-lg hover:shadow-gold/20 transition-all flex items-center gap-2">
+                Fale Conosco
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
+              </a>
               <Link to="/testar" className="group px-8 py-4 border border-gold/30 text-gold font-bold rounded-xl text-lg hover:bg-gold/10 transition-all flex items-center gap-2">
                 Testar Gratuitamente
               </Link>

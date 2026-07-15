@@ -31,15 +31,11 @@ export default function Header() {
           <nav className="hidden md:flex items-center gap-1">
             <Link to="/" className="px-3 py-2 text-gray-400 hover:text-gold transition-colors text-sm font-medium rounded-lg hover:bg-white/5">Início</Link>
             <Link to="/testar" className="px-3 py-2 text-gray-400 hover:text-gold transition-colors text-sm font-medium rounded-lg hover:bg-white/5">Testar Apps</Link>
-            <Link to="/order" className="px-3 py-2 text-gray-400 hover:text-gold transition-colors text-sm font-medium rounded-lg hover:bg-white/5">Fazer Pedido</Link>
-            {user && (
-              <Link to="/meus-pedidos" className="px-3 py-2 text-gray-400 hover:text-gold transition-colors text-sm font-medium rounded-lg hover:bg-white/5">Meus Pedidos</Link>
-            )}
-            {user?.isAdmin && (
-              <Link to="/admin" className="px-3 py-2 text-gold hover:text-yellow-300 transition-colors text-sm font-medium rounded-lg hover:bg-white/5 flex items-center gap-1">
-                <Shield className="w-3.5 h-3.5" /> Admin
-              </Link>
-            )}
+            <a href="https://www.instagram.com/devpro737/" target="_blank" rel="noopener noreferrer"
+              className="px-3 py-2 text-gold hover:text-yellow-300 transition-colors text-sm font-medium rounded-lg hover:bg-white/5 flex items-center gap-1.5">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+              Fale Conosco
+            </a>
           </nav>
         </div>
 
@@ -71,13 +67,11 @@ export default function Header() {
           <div className="px-4 py-4 space-y-2">
             <Link to="/" className="block px-3 py-2 text-gray-400 hover:text-gold rounded-lg hover:bg-white/5" onClick={() => setMobileOpen(false)}>Início</Link>
             <Link to="/testar" className="block px-3 py-2 text-gray-400 hover:text-gold rounded-lg hover:bg-white/5" onClick={() => setMobileOpen(false)}>Testar Apps</Link>
-            <Link to="/order" className="block px-3 py-2 text-gray-400 hover:text-gold rounded-lg hover:bg-white/5" onClick={() => setMobileOpen(false)}>Fazer Pedido</Link>
-            {user && (
-              <Link to="/meus-pedidos" className="block px-3 py-2 text-gray-400 hover:text-gold rounded-lg hover:bg-white/5" onClick={() => setMobileOpen(false)}>Meus Pedidos</Link>
-            )}
-            {user?.isAdmin && (
-              <Link to="/admin" className="block px-3 py-2 text-gold rounded-lg" onClick={() => setMobileOpen(false)}>Painel Admin</Link>
-            )}
+            <a href="https://www.instagram.com/devpro737/" target="_blank" rel="noopener noreferrer"
+              className="block px-3 py-2 text-gold rounded-lg hover:bg-white/5 flex items-center gap-2" onClick={() => setMobileOpen(false)}>
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+              Fale Conosco
+            </a>
             <div className="border-t border-gold/10 pt-2 mt-2">
               {user ? (
                 <button onClick={() => { handleLogout(); setMobileOpen(false); }} className="block w-full text-left px-3 py-2 text-red-400 rounded-lg hover:bg-white/5">Sair</button>
