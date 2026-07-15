@@ -31,6 +31,18 @@ export default function AdminDashboard() {
   const [data, setData] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showTools, setShowTools] = useState(false);
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.ctrlKey && e.key === 'd') {
+        e.preventDefault();
+        setShowTools(v => !v);
+      }
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
 
   const loadStats = () => { setLoading(true); api.getAdminStats()
     .then((res) => {
@@ -82,34 +94,36 @@ export default function AdminDashboard() {
     <div className="min-h-screen pt-20 pb-16">
       <div className="absolute inset-0 bg-gradient-to-b from-yellow-500/5 via-transparent to-gold/5 pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto px-4 relative z-10 mb-4">
-        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-sm text-yellow-200">
-              <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
-              <span>{d.storageType !== 'memory' ? 'Ferramentas de gerenciamento:' : 'Sem banco de dados configurado — dados ficam em memória temporária.'}</span>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={async () => {
-                try {
-                  await api.request('/admin/reset-status', { method: 'POST' });
-                  loadStats();
-                } catch (e) { console.error(e); }
-              }} className="text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 px-3 py-1.5 rounded-lg border border-blue-500/20 transition-all">
-                Redefinir status
-              </button>
-              <button onClick={async () => {
-                try {
-                  await api.clearData();
-                  loadStats();
-                } catch (e) { console.error(e); }
-              }} className="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-300 px-3 py-1.5 rounded-lg border border-red-500/20 transition-all">
-                Limpar tudo
-              </button>
+      {showTools && (
+        <div className="max-w-7xl mx-auto px-4 relative z-10 mb-4">
+          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm text-yellow-200">
+                <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+                <span>{d.storageType !== 'memory' ? 'Ferramentas de gerenciamento:' : 'Sem banco de dados configurado — dados ficam em memória temporária.'}</span>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={async () => {
+                  try {
+                    await api.request('/admin/reset-status', { method: 'POST' });
+                    loadStats();
+                  } catch (e) { console.error(e); }
+                }} className="text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 px-3 py-1.5 rounded-lg border border-blue-500/20 transition-all">
+                  Redefinir status
+                </button>
+                <button onClick={async () => {
+                  try {
+                    await api.clearData();
+                    loadStats();
+                  } catch (e) { console.error(e); }
+                }} className="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-300 px-3 py-1.5 rounded-lg border border-red-500/20 transition-all">
+                  Limpar tudo
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 relative z-10">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
