@@ -35,15 +35,15 @@ export const products = {
 };
 
 export const orders = {
-  list: () => request('/orders'),
-  get: (id: number) => request(`/orders/${id}`),
-  create: (data: any) => request('/orders', { method: 'POST', body: JSON.stringify(data) }),
+  list: () => request('/mercado/orders'),
+  get: (id: number) => request(`/mercado/orders/${id}`),
+  create: (data: any) => request('/mercado/orders', { method: 'POST', body: JSON.stringify(data) }),
   updateStatus: (id: number, status: string) =>
-    request(`/orders/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+    request(`/mercado/admin/orders/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
 };
 
 export const chat = {
-  list: (orderId: number) => request(`/orders/${orderId}/messages`),
+  list: (orderId: number) => request(`/mercado/orders/${orderId}/messages`),
   send: (orderId: number, message: string) =>
-    request(`/orders/${orderId}/messages`, { method: 'POST', body: JSON.stringify({ message }) }),
+    request(`/mercado/orders/${orderId}/messages`, { method: 'POST', body: JSON.stringify({ message }) }),
 };

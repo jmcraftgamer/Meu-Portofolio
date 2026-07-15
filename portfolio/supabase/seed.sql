@@ -40,6 +40,31 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- MERCADO APP: orders (supermercado)
+CREATE TABLE IF NOT EXISTS mercado_orders (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  items JSONB DEFAULT '[]',
+  delivery_name TEXT DEFAULT '',
+  address TEXT DEFAULT '',
+  phone TEXT DEFAULT '',
+  troco TEXT DEFAULT '',
+  notes TEXT DEFAULT '',
+  total DECIMAL(10,2) DEFAULT 0,
+  status TEXT DEFAULT 'pending',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS mercado_messages (
+  id SERIAL PRIMARY KEY,
+  order_id INTEGER REFERENCES mercado_orders(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  sender_role TEXT DEFAULT 'user',
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ADMIN PADRAO (senha: 45677VDTYT)
 INSERT INTO users (id, name, email, password, phone, company, is_admin)
 VALUES (1, 'Administrador', 'admin@gmail.com', '$2a$10$r1VcaxPNZWMEYmsPY8U6Z.AS6EttZpoKsFIrRoINyFZBfmUVQzh1K', '(11) 99999-0000', 'DevPro', true)

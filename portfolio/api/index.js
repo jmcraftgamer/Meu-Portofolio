@@ -40,12 +40,119 @@ var VALID_CATEGORIES = ['Mercearia', 'Hortifruit', 'Acougue', 'Padaria', 'Bebida
 
 var products = SEED_PRODUCTS.map(function(p, i) { return { id: i + 1, ...p, created_at: new Date().toISOString() }; });
 
+function getProductById(id) {
+  return products.find(function(p) { return p.id === id; }) || SEED_PRODUCTS[id - 1] || null;
+}
+
 // In-memory fallback
-var memUsers = [{ id: 1, name: 'Administrador', email: 'admin@gmail.com', password: bcrypt.hashSync('45677VDTYT', 10), phone: '(11) 99999-0000', company: 'DevPro', isAdmin: true, createdAt: new Date().toISOString() }];
+var memUsers = [
+  { id: 1, name: 'Administrador', email: 'admin@gmail.com', password: bcrypt.hashSync('45677VDTYT', 10), phone: '(11) 99999-0000', company: 'DevPro', isAdmin: true, createdAt: new Date().toISOString() },
+  { id: 2, name: 'Admin Central', email: 'admin@central.com', password: bcrypt.hashSync('admin123', 10), phone: '(11) 99999-0001', company: 'Central', isAdmin: true, createdAt: new Date().toISOString() },
+  { id: 3, name: 'Maria Cliente', email: 'maria@cliente.com', password: bcrypt.hashSync('cliente123', 10), phone: '(11) 98888-0000', company: '', isAdmin: false, createdAt: new Date().toISOString() }
+];
 var memOrders = [];
 var memMessages = [];
-var memNextUserId = 2;
+var memNextUserId = 4;
 var memNextOrderId = 1;
+
+// Mercado-specific in-memory storage
+var memMercadoOrders = [];
+var memMercadoMessages = [];
+var memMercadoNextOrderId = 1;
+
+async function getMercadoOrders(userId, isAdmin) {
+  if (supabase) {
+    try {
+      var q = supabase.from('mercado_orders').select('*');
+      if (!isAdmin) q = q.eq('user_id', userId);
+      q = q.order('created_at', { ascending: false });
+      var r = await q;
+      if (r.data) return r.data.map(function(o) {
+        return { ...o, items: typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []) };
+      });
+    } catch (e) { console.error(e); }
+  }
+  return memMercadoOrders.filter(function(o) {
+    return isAdmin || o.user_id === userId;
+  }).sort(function(a, b) {
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+}
+
+async function createMercadoOrder(userId, data) {
+  var items = (data.items || []).map(function(item) {
+    var product = getProductById(item.product_id);
+    var price = product && product.is_promotion && product.promo_price ? product.promo_price : (product ? product.price : 0);
+    return {
+      product_id: item.product_id,
+      product_name: product ? product.name : 'Produto #' + item.product_id,
+      quantity: item.quantity,
+      price: price
+    };
+  });
+  var total = items.reduce(function(s, i) { return s + i.price * i.quantity; }, 0);
+  var order = {
+    id: memMercadoNextOrderId++, user_id: userId, items: items,
+    delivery_name: data.delivery_name || '', address: data.address || '',
+    phone: data.phone || '', troco: data.troco || '', notes: data.notes || '',
+    total: total, status: 'pending',
+    created_at: new Date().toISOString(), updated_at: new Date().toISOString()
+  };
+  memMercadoOrders.push(order);
+  if (supabase) {
+    try {
+      var r = await supabase.from('mercado_orders').insert({
+        user_id: userId, items: JSON.stringify(items),
+        delivery_name: order.delivery_name, address: order.address,
+        phone: order.phone, troco: order.troco, notes: order.notes,
+        total: total, status: 'pending'
+      }).select().maybeSingle();
+      if (r.data) { order.id = r.data.id; order.created_at = r.data.created_at; }
+    } catch (e) { console.error(e); }
+  }
+  return order;
+}
+
+async function updateMercadoOrderStatus(orderId, status) {
+  if (supabase) {
+    try {
+      await supabase.from('mercado_orders').update({ status: status, updated_at: new Date().toISOString() }).eq('id', orderId);
+    } catch (e) { console.error(e); }
+  }
+  var o = memMercadoOrders.find(function(o) { return o.id === parseInt(orderId); });
+  if (o) o.status = status;
+}
+
+async function getMercadoMessages(orderId) {
+  if (supabase) {
+    try {
+      var r = await supabase.from('mercado_messages').select('*').eq('order_id', orderId).order('created_at', { ascending: true });
+      if (r.data) return r.data;
+    } catch (e) { console.error(e); }
+  }
+  return memMercadoMessages.filter(function(m) { return m.order_id === parseInt(orderId); }).sort(function(a, b) {
+    return new Date(a.created_at) - new Date(b.created_at);
+  });
+}
+
+async function createMercadoMessage(orderId, userId, text, senderRole) {
+  var msg = {
+    id: memMercadoMessages.length + 1, order_id: parseInt(orderId),
+    user_id: userId, sender_role: senderRole || 'user',
+    message: text, created_at: new Date().toISOString()
+  };
+  memMercadoMessages.push(msg);
+  if (supabase) {
+    try {
+      var r = await supabase.from('mercado_messages').insert({
+        order_id: parseInt(orderId), user_id: userId,
+        sender_role: senderRole || 'user', message: text
+      }).select().maybeSingle();
+      if (r.data) { msg.id = r.data.id; msg.created_at = r.data.created_at; }
+    } catch (e) { console.error(e); }
+  }
+  return msg;
+}
 
 function parseBody(req) {
   return new Promise(function(resolve) {
@@ -191,14 +298,19 @@ export default async function handler(req, res) {
     var body = method !== 'GET' ? await parseBody(req) : {};
 
     // AUTH
+    function userResponse(u) {
+      return { id: u.id, name: u.name, email: u.email, isAdmin: !!u.isAdmin, role: u.isAdmin ? 'admin' : 'user' };
+    }
+
     if (path === '/api/auth/register' && method === 'POST') {
       var existing = await findUserByEmail(body.email);
       if (existing) return send(res, 400, { error: 'Email já cadastrado' });
       var hp = bcrypt.hashSync(body.password, 10);
-      var isAdm = (body.email || '').toLowerCase() === 'admin@gmail.com';
+      var adminEmails = ['admin@gmail.com', 'admin@central.com'];
+      var isAdm = adminEmails.indexOf((body.email || '').toLowerCase()) !== -1;
       var u = await createUser(body.name, body.email, hp, body.phone, body.company, isAdm);
       var tk = jwt.sign({ id: u.id, email: u.email, name: u.name, isAdmin: u.isAdmin }, JWT_SECRET);
-      return send(res, 200, { token: tk, user: { id: u.id, name: u.name, email: u.email, isAdmin: !!u.isAdmin } });
+      return send(res, 200, { token: tk, user: userResponse(u) });
     }
 
     if (path === '/api/auth/login' && method === 'POST') {
@@ -206,7 +318,7 @@ export default async function handler(req, res) {
       if (!u || !u.password) return send(res, 400, { error: 'Credenciais inválidas' });
       if (!bcrypt.compareSync(body.password, u.password)) return send(res, 400, { error: 'Credenciais inválidas' });
       var tk = jwt.sign({ id: u.id, email: u.email, name: u.name, isAdmin: !!u.isAdmin }, JWT_SECRET);
-      return send(res, 200, { token: tk, user: { id: u.id, name: u.name, email: u.email, isAdmin: !!u.isAdmin } });
+      return send(res, 200, { token: tk, user: userResponse(u) });
     }
 
     if (path === '/api/auth/google' && method === 'POST') {
@@ -215,7 +327,7 @@ export default async function handler(req, res) {
         u = await createUser(body.name, body.email, null, '', '', false);
       }
       var tk = jwt.sign({ id: u.id, email: u.email, name: u.name, isAdmin: !!u.isAdmin }, JWT_SECRET);
-      return send(res, 200, { token: tk, user: { id: u.id, name: u.name, email: u.email, isAdmin: !!u.isAdmin } });
+      return send(res, 200, { token: tk, user: userResponse(u) });
     }
 
     if (path === '/api/auth/me') {
@@ -223,7 +335,7 @@ export default async function handler(req, res) {
       if (!userData) return send(res, 401, { error: 'Token required' });
       var u = await findUserById(userData.id);
       if (!u) return send(res, 404, { error: 'User not found' });
-      return send(res, 200, { id: u.id, name: u.name, email: u.email, phone: u.phone, company: u.company, isAdmin: !!u.isAdmin });
+      return send(res, 200, { user: userResponse(u) });
     }
 
     // PRODUCTS
@@ -247,7 +359,60 @@ export default async function handler(req, res) {
       return send(res, 200, p);
     }
 
-    // ORDERS
+    // MERCADO ORDERS
+    if (path === '/api/mercado/orders') {
+      var userData = auth(req);
+      if (!userData) return send(res, 401, { error: 'Token required' });
+      if (method === 'POST') {
+        var mo = await createMercadoOrder(userData.id, body);
+        return send(res, 201, mo);
+      }
+      if (method === 'GET') {
+        var mercadoOrders = await getMercadoOrders(userData.id, !!userData.isAdmin);
+        return send(res, 200, mercadoOrders);
+      }
+    }
+
+    // MERCADO CHAT
+    var mercadoMsgMatch = path.match(/^\/api\/mercado\/orders\/(\d+)\/messages$/);
+    if (mercadoMsgMatch && (method === 'GET' || method === 'POST')) {
+      var userData = auth(req);
+      if (!userData) return send(res, 401, { error: 'Token required' });
+      var oid = parseInt(mercadoMsgMatch[1]);
+      var mOrders = await getMercadoOrders(userData.id, !!userData.isAdmin);
+      var mOrder = mOrders.find(function(o) { return o.id === oid; });
+      if (!mOrder) return send(res, 404, { error: 'Pedido nao encontrado' });
+      if (mOrder.user_id !== userData.id && !userData.isAdmin) return send(res, 403, { error: 'Acesso negado' });
+      if (method === 'POST') {
+        var newMsg = await createMercadoMessage(oid, userData.id, body.message || body.text || '', userData.isAdmin ? 'admin' : 'user');
+        return send(res, 201, newMsg);
+      }
+      var msgs = await getMercadoMessages(oid);
+      return send(res, 200, msgs);
+    }
+
+    // MERCADO ADMIN
+    if (path === '/api/mercado/admin/orders' && method === 'GET') {
+      var userData = auth(req);
+      if (!userData) return send(res, 401, { error: 'Token required' });
+      if (!userData.isAdmin) return send(res, 403, { error: 'Admin only' });
+      var allMercadoOrders = await getMercadoOrders(null, true);
+      return send(res, 200, allMercadoOrders);
+    }
+
+    var mStatusMatch = path.match(/^\/api\/mercado\/admin\/orders\/(\d+)\/status$/);
+    if (mStatusMatch && method === 'PUT') {
+      var userData = auth(req);
+      if (!userData) return send(res, 401, { error: 'Token required' });
+      if (!userData.isAdmin) return send(res, 403, { error: 'Admin only' });
+      await updateMercadoOrderStatus(parseInt(mStatusMatch[1]), body.status);
+      var updatedOrders = await getMercadoOrders(null, true);
+      var updatedOrder = updatedOrders.find(function(o) { return o.id === parseInt(mStatusMatch[1]); });
+      if (!updatedOrder) return send(res, 404, { error: 'Pedido nao encontrado' });
+      return send(res, 200, updatedOrder);
+    }
+
+    // ORDERS (portfolio)
     if (path === '/api/orders') {
       var userData = auth(req);
       if (!userData) return send(res, 401, { error: 'Token required' });
@@ -261,7 +426,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // CHAT
+    // CHAT (portfolio)
     var chatMatch = path.match(/^\/api\/chat\/(\d+)$/);
     if (chatMatch && (method === 'GET' || method === 'POST')) {
       var userData = auth(req);
@@ -277,7 +442,7 @@ export default async function handler(req, res) {
       return send(res, 200, msgs);
     }
 
-    // ADMIN
+    // ADMIN (portfolio)
     if (path === '/api/admin/orders' && method === 'GET') {
       var userData = auth(req);
       if (!userData) return send(res, 401, { error: 'Token required' });
