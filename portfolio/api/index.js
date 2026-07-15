@@ -210,6 +210,9 @@ function send(res, status, data) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.end(JSON.stringify(data));
 }
 
@@ -443,10 +446,11 @@ function computeStats(allOrders) {
 
 async function getAdminStats() {
   var allUsers = [];
+  var supabaseWorking = false;
   if (supabase) {
     try {
       var uRes = await supabase.from('users').select('*');
-      if (uRes.data) allUsers = uRes.data;
+      if (uRes.data) { allUsers = uRes.data; supabaseWorking = true; }
     } catch (e) {}
   }
   var userMap = {};
@@ -472,7 +476,7 @@ async function getAdminStats() {
   });
   var stats = computeStats(memOrdersWithUser);
   stats.orders = memOrdersWithUser;
-  stats.storageType = storageType;
+  stats.storageType = supabaseWorking ? 'supabase' : storageType;
   return stats;
 }
 
@@ -482,6 +486,7 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     return res.end();
   }
 
