@@ -32,17 +32,22 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const loadStats = () => api.getAdminStats()
+    .then((res) => {
+      if (!res || typeof res !== 'object') { setError('Resposta inválida da API'); return; }
+      setData(res);
+      setError('');
+    })
+    .catch((err) => {
+      console.error(err);
+      if (!loading) setError(err.message || 'Erro ao carregar dados');
+    })
+    .finally(() => setLoading(false));
+
   useEffect(() => {
-    api.getAdminStats()
-      .then((res) => {
-        if (!res || typeof res !== 'object') { setError('Resposta inválida da API'); return; }
-        setData(res);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError(err.message || 'Erro ao carregar dados');
-      })
-      .finally(() => setLoading(false));
+    loadStats();
+    const interval = setInterval(loadStats, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) return (
