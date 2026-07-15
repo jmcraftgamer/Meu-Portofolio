@@ -24,25 +24,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
+    if (!token) { setLoading(false); return; }
+
+    var cancelled = false;
+
+    function tryLoad(retries: number) {
+      if (cancelled) return;
       api.getMe()
         .then((data: any) => {
+          if (cancelled) return;
           const u = data.user || data;
-          if (u.id) {
+          if (u && u.id) {
             setUser({ id: u.id, name: u.name, email: u.email, isAdmin: !!u.isAdmin });
           } else {
             localStorage.removeItem('token');
             setToken(null);
           }
+          setLoading(false);
         })
-        .catch(() => {
-          localStorage.removeItem('token');
-          setToken(null);
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
+        .catch((err) => {
+          if (cancelled) return;
+          // Token inválido/expirado → limpa
+          if (err.message === 'Token required' || err.message === 'jwt malformed' || err.message === 'jwt expired') {
+            localStorage.removeItem('token');
+            setToken(null);
+            setLoading(false);
+            return;
+          }
+          // Erro transitório (cold start, rede) → tenta de novo
+          if (retries > 0) {
+            setTimeout(function() { tryLoad(retries - 1); }, 1500);
+          } else {
+            setUser(null);
+            setLoading(false);
+          }
+        });
     }
+
+    tryLoad(3);
+
+    return function() { cancelled = true; };
   }, [token]);
 
   const login = (newToken: string, newUser: User) => {

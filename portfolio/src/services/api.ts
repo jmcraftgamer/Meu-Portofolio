@@ -15,6 +15,7 @@ async function request(path: string, options: RequestInit = {}) {
 }
 
 export const api = {
+  request,
   login: (email: string, password: string) =>
     request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
 
@@ -52,4 +53,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ text, type, file_data: fileData, file_type: fileType }),
     }),
+
+  clearData: () => request('/admin/clear', { method: 'POST' }),
+
+  deleteOrder: (id: number) => request(`/admin/orders/${id}`, { method: 'DELETE' }),
 };

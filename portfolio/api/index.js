@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
+import { Redis } from '@upstash/redis';
 
 var JWT_SECRET = process.env.JWT_SECRET || 'portfolio-secret-key-2024';
 
@@ -10,6 +11,15 @@ try {
     supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
   }
 } catch (e) {}
+
+var redis = null;
+try {
+  if (process.env.UPSTASH_REDIS_URL && process.env.UPSTASH_REDIS_TOKEN) {
+    redis = new Redis({ url: process.env.UPSTASH_REDIS_URL, token: process.env.UPSTASH_REDIS_TOKEN });
+  }
+} catch (e) {}
+
+var storageType = supabase ? 'supabase' : (redis ? 'redis' : 'memory');
 
 var SEED_PRODUCTS = [
   { name: 'Arroz Branco Tipo 1 - 5kg', description: 'Arroz agulhinha tipo 1, graos selecionados', price: 24.90, promo_price: 19.90, category: 'Mercearia', image: '/images/arroz.png', is_promotion: 1, stock: 50 },
@@ -54,6 +64,28 @@ var memOrders = [];
 var memMessages = [];
 var memNextUserId = 4;
 var memNextOrderId = 1;
+
+// Redis persistence helpers
+async function redisGet(key) {
+  if (!redis) return null;
+  try { return await redis.get(key); } catch (e) { return null; }
+}
+async function redisSet(key, data) {
+  if (!redis) return;
+  try { await redis.set(key, JSON.stringify(data)); } catch (e) {}
+}
+
+async function loadPersistentOrders() {
+  if (redis) {
+    var saved = await redisGet('devpro_orders');
+    if (saved) return JSON.parse(saved);
+  }
+  return [];
+}
+
+async function savePersistentOrders(orders) {
+  if (redis) await redisSet('devpro_orders', orders);
+}
 
 // Mercado-specific in-memory storage
 var memMercadoOrders = [];
@@ -207,11 +239,28 @@ async function createUser(name, email, hashedPw, phone, company, isAdmin) {
   return u;
 }
 
+async function syncOrdersFromRedis() {
+  if (redis && memOrders.length === 0) {
+    var saved = await loadPersistentOrders();
+    if (saved && saved.length > 0) {
+      memOrders.length = 0;
+      saved.forEach(function(o) { memOrders.push(o); });
+      var maxId = saved.reduce(function(m, o) { return Math.max(m, o.id || 0); }, 0);
+      if (maxId >= memNextOrderId) memNextOrderId = maxId + 1;
+    }
+  }
+}
+
+async function persistOrders() {
+  if (redis) await savePersistentOrders(memOrders);
+}
+
 async function getOrders(userId) {
   if (supabase) {
     var r = await supabase.from('orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
     if (r.data) return r.data.map(function(o) { return { id: o.id, userId: o.user_id, type: o.type, description: o.description, name: o.name, phone: o.phone, company: o.company || '', deliveryTime: o.delivery_time, features: o.features, value: o.value, status: o.status, createdAt: o.created_at, delivered_at: o.delivered_at, delivery_confirmed_at: o.delivery_confirmed_at }; });
   }
+  await syncOrdersFromRedis();
   return memOrders.filter(function(o) { return o.userId === userId; }).sort(function(a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
 }
 
@@ -223,6 +272,7 @@ async function createOrder(userId, data) {
   }
   var o = { id: memNextOrderId++, userId: userId, type: data.type, description: data.description, name: data.name, phone: data.phone, company: data.company || '', deliveryTime: data.deliveryTime, features: JSON.stringify(data.features || []), value: vals[data.type] || 0, status: 'pending', createdAt: new Date().toISOString(), delivered_at: null, delivery_confirmed_at: null };
   memOrders.push(o);
+  await persistOrders();
   return o;
 }
 
@@ -231,6 +281,7 @@ async function getAllOrders() {
     var r = await supabase.from('orders').select('*').order('created_at', { ascending: false });
     if (r.data) return r.data.map(function(o) { return { id: o.id, userId: o.user_id, type: o.type, description: o.description, name: o.name, phone: o.phone, company: o.company || '', deliveryTime: o.delivery_time, features: o.features, value: o.value, status: o.status, createdAt: o.created_at, delivered_at: o.delivered_at, delivery_confirmed_at: o.delivery_confirmed_at }; });
   }
+  await syncOrdersFromRedis();
   return memOrders.slice().sort(function(a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
 }
 
@@ -239,6 +290,7 @@ async function findOrderById(id) {
     var r = await supabase.from('orders').select('*').eq('id', id).maybeSingle();
     if (r.data) return { id: r.data.id, userId: r.data.user_id, type: r.data.type, description: r.data.description, name: r.data.name, phone: r.data.phone, company: r.data.company || '', deliveryTime: r.data.delivery_time, features: r.data.features, value: r.data.value, status: r.data.status, createdAt: r.data.created_at, delivered_at: r.data.delivered_at, delivery_confirmed_at: r.data.delivery_confirmed_at };
   }
+  await syncOrdersFromRedis();
   return memOrders.find(function(o) { return o.id === id; });
 }
 
@@ -246,8 +298,23 @@ async function updateOrderStatus(id, status) {
   if (supabase) {
     await supabase.from('orders').update({ status: status }).eq('id', id);
   }
+  await syncOrdersFromRedis();
   var o = memOrders.find(function(o) { return o.id === id; });
-  if (o) o.status = status;
+  if (o) { o.status = status; await persistOrders(); }
+}
+
+async function deleteOrder(id) {
+  if (supabase) {
+    await supabase.from('orders').delete().eq('id', id);
+    await supabase.from('messages').delete().eq('order_id', id);
+  }
+  await syncOrdersFromRedis();
+  var idx = memOrders.findIndex(function(o) { return o.id === id; });
+  if (idx !== -1) {
+    memOrders.splice(idx, 1);
+    memMessages = memMessages.filter(function(m) { return m.orderId !== id; });
+    await persistOrders();
+  }
 }
 
 async function deliverOrder(id, userId) {
@@ -255,8 +322,9 @@ async function deliverOrder(id, userId) {
   if (supabase) {
     await supabase.from('orders').update({ delivered_at: now, status: 'completed' }).eq('id', id);
   }
+  await syncOrdersFromRedis();
   var o = memOrders.find(function(o) { return o.id === id; });
-  if (o) { o.delivered_at = now; o.status = 'completed'; }
+  if (o) { o.delivered_at = now; o.status = 'completed'; await persistOrders(); }
   return o;
 }
 
@@ -265,8 +333,9 @@ async function confirmDelivery(id, userId) {
   if (supabase) {
     await supabase.from('orders').update({ delivery_confirmed_at: now }).eq('id', id).eq('user_id', userId);
   }
+  await syncOrdersFromRedis();
   var o = memOrders.find(function(o) { return o.id === id && o.userId === userId; });
-  if (o) o.delivery_confirmed_at = now;
+  if (o) { o.delivery_confirmed_at = now; await persistOrders(); }
   return o;
 }
 
@@ -393,6 +462,7 @@ async function getAdminStats() {
         });
         var stats = computeStats(mapped);
         stats.orders = mapped;
+        stats.storageType = 'supabase';
         return stats;
       }
     } catch (e) { console.error(e); }
@@ -402,6 +472,7 @@ async function getAdminStats() {
   });
   var stats = computeStats(memOrdersWithUser);
   stats.orders = memOrdersWithUser;
+  stats.storageType = storageType;
   return stats;
 }
 
@@ -588,6 +659,12 @@ export default async function handler(req, res) {
       return send(res, 200, Object.assign({}, order, { status: body.status }));
     }
 
+    var deleteMatch = path.match(/^\/api\/admin\/orders\/(\d+)$/);
+    if (deleteMatch && method === 'DELETE') {
+      await deleteOrder(parseInt(deleteMatch[1]));
+      return send(res, 200, { success: true });
+    }
+
     var deliverMatch = path.match(/^\/api\/admin\/orders\/(\d+)\/deliver$/);
     if (deliverMatch && method === 'PUT') {
       var userData = auth(req);
@@ -616,6 +693,29 @@ export default async function handler(req, res) {
       } catch (e) {
         return send(res, 500, { error: 'Erro ao carregar stats: ' + (e.message || '') });
       }
+    }
+
+    if (path === '/api/admin/clear' && method === 'POST') {
+      if (redis) { await redis.del('devpro_orders'); }
+      if (supabase) {
+        await supabase.from('orders').delete().neq('id', 0);
+        await supabase.from('messages').delete().neq('id', 0);
+      }
+      memOrders.length = 0;
+      memMessages.length = 0;
+      memMercadoOrders.length = 0;
+      memMercadoMessages.length = 0;
+      return send(res, 200, { success: true });
+    }
+
+    if (path === '/api/admin/reset-status' && method === 'POST') {
+      if (supabase) {
+        await supabase.from('orders').update({ status: 'pending', delivered_at: null, delivery_confirmed_at: null }).neq('id', 0);
+      }
+      await syncOrdersFromRedis();
+      memOrders.forEach(function(o) { o.status = 'pending'; o.delivered_at = null; o.delivery_confirmed_at = null; });
+      await persistOrders();
+      return send(res, 200, { success: true });
     }
 
     if (path === '/api/test')

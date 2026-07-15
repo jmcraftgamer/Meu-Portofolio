@@ -78,6 +78,12 @@ export default function AdminOrders() {
     loadOrders();
   };
 
+  const handleDelete = async (id: number) => {
+    if (!confirm('Tem certeza que deseja remover este pedido?')) return;
+    await api.deleteOrder(id);
+    loadOrders();
+  };
+
   const filteredOrders = filter === 'all' ? orders : orders.filter(o => o.status === filter);
 
   if (loading) return (
@@ -138,6 +144,10 @@ export default function AdminOrders() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <button onClick={() => handleDelete(order.id)}
+                        className="px-3 py-1.5 bg-red-500/10 text-red-400 rounded-lg text-xs font-semibold border border-red-500/20 hover:bg-red-500/20 transition-all">
+                        Remover
+                      </button>
                       <select value={order.status} onChange={e => updateStatus(order.id, e.target.value)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold border appearance-none cursor-pointer outline-none ${
                           statuses.find(s => s.value === order.status)?.bg || 'bg-white/5'
@@ -150,6 +160,12 @@ export default function AdminOrders() {
                         <button onClick={() => handleDeliver(order.id)}
                           className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg text-xs font-semibold border border-emerald-500/20 hover:bg-emerald-500/20 transition-all">
                           Marcar Entregue
+                        </button>
+                      )}
+                      {order.status !== 'cancelled' && (
+                        <button onClick={() => handleDelete(order.id)}
+                          className="px-3 py-1.5 bg-red-500/10 text-red-400 rounded-lg text-xs font-semibold border border-red-500/20 hover:bg-red-500/20 transition-all">
+                          Cancelar
                         </button>
                       )}
                     </div>

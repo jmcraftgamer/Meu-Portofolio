@@ -32,7 +32,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const loadStats = () => api.getAdminStats()
+  const loadStats = () => { setLoading(true); api.getAdminStats()
     .then((res) => {
       if (!res || typeof res !== 'object') { setError('Resposta inválida da API'); return; }
       setData(res);
@@ -40,13 +40,14 @@ export default function AdminDashboard() {
     })
     .catch((err) => {
       console.error(err);
-      if (!loading) setError(err.message || 'Erro ao carregar dados');
+      setError(err.message || 'Erro ao carregar dados');
     })
     .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     loadStats();
-    const interval = setInterval(loadStats, 5000);
+    const interval = setInterval(loadStats, 6000);
     return () => clearInterval(interval);
   }, []);
 
@@ -80,6 +81,36 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen pt-20 pb-16">
       <div className="absolute inset-0 bg-gradient-to-b from-yellow-500/5 via-transparent to-gold/5 pointer-events-none" />
+
+      <div className="max-w-7xl mx-auto px-4 relative z-10 mb-4">
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm text-yellow-200">
+              <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+              <span>{d.storageType !== 'memory' ? 'Ferramentas de gerenciamento:' : 'Sem banco de dados configurado — dados ficam em memória temporária.'}</span>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={async () => {
+                try {
+                  await api.request('/admin/reset-status', { method: 'POST' });
+                  loadStats();
+                } catch (e) { console.error(e); }
+              }} className="text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 px-3 py-1.5 rounded-lg border border-blue-500/20 transition-all">
+                Redefinir status
+              </button>
+              <button onClick={async () => {
+                try {
+                  await api.clearData();
+                  loadStats();
+                } catch (e) { console.error(e); }
+              }} className="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-300 px-3 py-1.5 rounded-lg border border-red-500/20 transition-all">
+                Limpar tudo
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 relative z-10">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
@@ -165,38 +196,53 @@ export default function AdminDashboard() {
         </div>
 
         {/* Order List */}
-        <div className="bg-glass rounded-xl border border-gold/10 mb-6 overflow-hidden">
+        <div className="bg-glass rounded-xl border border-gold/10 mb-6">
           <div className="p-5 border-b border-gold/10 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Package className="w-4 h-4 text-gold" />
-              <h3 className="text-white font-semibold">Pedidos Recentes</h3>
+              <h3 className="text-white font-semibold">Pedidos</h3>
             </div>
-            <Link to="/admin/pedidos" className="text-gold text-sm hover:underline">Ver todos</Link>
+            <span className="text-gold text-sm">{orders.length} pedido{orders.length !== 1 ? 's' : ''}</span>
           </div>
-          <div className="divide-y divide-gold/5 max-h-96 overflow-y-auto">
+          <div className="divide-y divide-gold/5">
             {orders.length === 0 ? (
               <div className="text-center py-8 text-gray-500 text-sm">Nenhum pedido ainda.</div>
-            ) : orders.slice(0, 20).map((order: any) => (
-              <div key={order.id} className="p-4 hover:bg-white/5 transition-colors">
-                <div className="flex flex-wrap items-start justify-between gap-2">
+            ) : orders.map((order: any) => (
+              <div key={order.id} className="px-5 py-4 hover:bg-white/5 transition-colors">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-gold/10 flex items-center justify-center flex-shrink-0">
+                    <div className="w-9 h-9 rounded-lg bg-gold/10 flex items-center justify-center flex-shrink-0">
                       <span className="text-gold text-xs font-bold">#{order.id}</span>
                     </div>
                     <div className="min-w-0">
-                      <div className="text-white text-sm font-medium truncate">{order.name || 'Sem nome'}</div>
-                      <div className="text-gray-500 text-xs truncate">{order.userName} • {typeLabel[order.type] || order.type}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white text-sm font-medium">{order.name || 'Sem nome'}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statusColor[order.status] || 'text-gray-400 bg-white/5'}`}>
+                          {statusLabel[order.status] || order.status}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-gray-500 text-xs mt-0.5">
+                        <span>{order.userName}</span>
+                        <span>{typeLabel[order.type] || order.type}</span>
+                        {order.phone && <span>{order.phone}</span>}
+                        {order.company && <span>{order.company}</span>}
+                        <span>R$ {(order.value || 0).toFixed(2)}</span>
+                        <span>{new Date(order.createdAt).toLocaleDateString('pt-BR')}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-white text-xs font-bold">R$ {(order.value || 0).toFixed(2)}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statusColor[order.status] || 'text-gray-400 bg-white/5'}`}>
-                      {statusLabel[order.status] || order.status}
-                    </span>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button onClick={async () => {
+                      if (!confirm('Cancelar pedido #' + order.id + '?')) return;
+                      await api.deleteOrder(order.id);
+                      loadStats();
+                    }} className="px-3 py-1.5 bg-red-500/10 text-red-400 rounded-lg text-xs font-semibold border border-red-500/20 hover:bg-red-500/20 transition-all">
+                      Cancelar
+                    </button>
                   </div>
                 </div>
                 {order.description && (
-                  <p className="text-gray-600 text-xs mt-1.5 truncate ml-11">{order.description}</p>
+                  <p className="text-gray-600 text-xs mt-2 ml-12">{order.description}</p>
                 )}
               </div>
             ))}
