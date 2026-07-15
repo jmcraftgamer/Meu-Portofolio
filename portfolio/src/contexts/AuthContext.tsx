@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { api } from '../services/api';
 
 interface User {
   id: number;
@@ -24,13 +25,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (token) {
-      fetch('/api/auth/me', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-        .then(r => r.json())
-        .then(data => {
-          if (data.id) {
-            setUser({ id: data.id, name: data.name, email: data.email, isAdmin: !!data.isAdmin });
+      api.getMe()
+        .then((data: any) => {
+          const u = data.user || data;
+          if (u.id) {
+            setUser({ id: u.id, name: u.name, email: u.email, isAdmin: !!u.isAdmin });
           } else {
             localStorage.removeItem('token');
             setToken(null);

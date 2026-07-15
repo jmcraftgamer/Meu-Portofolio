@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
-import { Package, MessageCircle, Clock, CheckCircle, XCircle, ChevronDown, Send } from 'lucide-react';
+import { Package, MessageCircle, Clock, CheckCircle, XCircle, Send, Paperclip, Image, Mic, FileText } from 'lucide-react';
 
 const statuses = [
   { value: 'pending', label: 'Pendente', color: 'text-yellow-400', bg: 'bg-yellow-400/10 border-yellow-400/20' },
   { value: 'in_progress', label: 'Em Andamento', color: 'text-blue-400', bg: 'bg-blue-400/10 border-blue-400/20' },
   { value: 'completed', label: 'Concluído', color: 'text-green-400', bg: 'bg-green-400/10 border-green-400/20' },
+  { value: 'delivered', label: 'Entregue', color: 'text-emerald-400', bg: 'bg-emerald-400/10 border-emerald-400/20' },
   { value: 'cancelled', label: 'Cancelado', color: 'text-red-400', bg: 'bg-red-400/10 border-red-400/20' },
 ];
 
@@ -16,11 +17,14 @@ export default function AdminOrders() {
   const [chatOrder, setChatOrder] = useState<number | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [msgText, setMsgText] = useState('');
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   const loadOrders = async () => {
     try {
-      const data = await api.getAdminOrders();
-      setOrders(data);
+      setOrders(await api.getAdminOrders());
     } catch (err) {
       console.error(err);
     } finally {
@@ -30,15 +34,19 @@ export default function AdminOrders() {
 
   useEffect(() => { loadOrders(); }, []);
 
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   const updateStatus = async (id: number, status: string) => {
     await api.updateOrderStatus(id, status);
     loadOrders();
   };
 
   const openChat = async (orderId: number) => {
+    if (chatOrder === orderId) { setChatOrder(null); return; }
     setChatOrder(orderId);
-    const msgs = await api.getMessages(orderId);
-    setMessages(msgs);
+    setMessages(await api.getMessages(orderId));
   };
 
   const sendMessage = async () => {
@@ -46,6 +54,24 @@ export default function AdminOrders() {
     const msgs = await api.sendMessage(chatOrder, msgText);
     setMessages(msgs);
     setMsgText('');
+  };
+
+  const sendFile = async (input: HTMLInputElement | null, type: string) => {
+    if (!input || !input.files?.length || !chatOrder) return;
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const dataUrl = e.target?.result as string;
+      const msgs = await api.sendMessage(chatOrder, file.name, type, dataUrl, file.type);
+      setMessages(msgs);
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  };
+
+  const handleDeliver = async (id: number) => {
+    await api.deliverOrder(id);
+    loadOrders();
   };
 
   const filteredOrders = filter === 'all' ? orders : orders.filter(o => o.status === filter);
@@ -65,7 +91,6 @@ export default function AdminOrders() {
           <span className="text-gradient">Pedidos</span>
         </h1>
 
-        {/* Filters */}
         <div className="flex flex-wrap gap-2 mb-6">
           {[{ value: 'all', label: 'Todos' }, ...statuses].map(s => (
             <button key={s.value} onClick={() => setFilter(s.value)}
@@ -93,6 +118,16 @@ export default function AdminOrders() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-white font-semibold">#{order.id}</span>
+                        {order.delivered_at && (
+                          <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] rounded-full border border-emerald-500/20 flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" /> Entregue {new Date(order.delivered_at).toLocaleDateString('pt-BR')}
+                          </span>
+                        )}
+                        {order.delivery_confirmed_at && (
+                          <span className="px-2 py-0.5 bg-green-500/10 text-green-400 text-[10px] rounded-full border border-green-500/20">
+                            Confirmado pelo cliente
+                          </span>
+                        )}
                       </div>
                       <div className="text-gray-400 text-sm mt-1">
                         {order.userName} • {order.userEmail} • {order.userPhone}
@@ -107,6 +142,12 @@ export default function AdminOrders() {
                           <option key={s.value} value={s.value} className="bg-[#0a0a0a]">{s.label}</option>
                         ))}
                       </select>
+                      {order.status !== 'cancelled' && order.status !== 'completed' && order.status !== 'delivered' && (
+                        <button onClick={() => handleDeliver(order.id)}
+                          className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg text-xs font-semibold border border-emerald-500/20 hover:bg-emerald-500/20 transition-all">
+                          Marcar Entregue
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -138,9 +179,13 @@ export default function AdminOrders() {
                   })()}
 
                   <button onClick={() => openChat(order.id)}
-                    className="flex items-center gap-1.5 px-4 py-2 border border-gold/30 rounded-lg text-gold text-sm hover:bg-gold/10 transition-all">
+                    className={`flex items-center gap-1.5 px-4 py-2 border rounded-lg text-sm transition-all ${
+                      chatOrder === order.id
+                        ? 'bg-gold text-black border-gold'
+                        : 'border-gold/30 text-gold hover:bg-gold/10'
+                    }`}>
                     <MessageCircle className="w-4 h-4" />
-                    Chat com {order.name}
+                    {chatOrder === order.id ? 'Fechar Chat' : `Chat com ${order.name}`}
                   </button>
                 </div>
 
@@ -157,12 +202,39 @@ export default function AdminOrders() {
                             <div className="text-[10px] text-gray-500 mb-1">
                               {msg.isAdmin ? 'Admin' : order.name} - {new Date(msg.createdAt).toLocaleString('pt-BR')}
                             </div>
-                            {msg.text}
+                            {msg.type === 'image' && msg.file_data ? (
+                              <img src={msg.file_data} alt={msg.text} className="max-w-full rounded-lg max-h-48 cursor-pointer" onClick={() => window.open(msg.file_data, '_blank')} />
+                            ) : msg.type === 'audio' && msg.file_data ? (
+                              <audio controls className="w-full max-w-xs">
+                                <source src={msg.file_data} type={msg.file_type || 'audio/mpeg'} />
+                              </audio>
+                            ) : msg.type === 'file' && msg.file_data ? (
+                              <a href={msg.file_data} download={msg.text} className="flex items-center gap-2 text-gold underline">
+                                <FileText className="w-4 h-4" /> {msg.text}
+                              </a>
+                            ) : (
+                              msg.text
+                            )}
                           </div>
                         </div>
                       ))}
+                      <div ref={chatEndRef} />
                     </div>
                     <div className="flex gap-2 p-4 border-t border-gold/10">
+                      <input type="file" ref={fileInputRef} className="hidden" onChange={() => sendFile(fileInputRef.current, 'file')} />
+                      <input type="file" accept="image/*" ref={imageInputRef} className="hidden" onChange={() => sendFile(imageInputRef.current, 'image')} />
+                      <input type="file" accept="audio/*" ref={audioInputRef} className="hidden" onChange={() => sendFile(audioInputRef.current, 'audio')} />
+                      <div className="flex gap-1">
+                        <button onClick={() => imageInputRef.current?.click()} className="p-2.5 bg-white/5 border border-gold/10 rounded-xl text-gold hover:bg-gold/10 transition-all" title="Enviar imagem">
+                          <Image className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => audioInputRef.current?.click()} className="p-2.5 bg-white/5 border border-gold/10 rounded-xl text-gold hover:bg-gold/10 transition-all" title="Enviar áudio">
+                          <Mic className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => fileInputRef.current?.click()} className="p-2.5 bg-white/5 border border-gold/10 rounded-xl text-gold hover:bg-gold/10 transition-all" title="Enviar arquivo">
+                          <Paperclip className="w-4 h-4" />
+                        </button>
+                      </div>
                       <input value={msgText} onChange={e => setMsgText(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && sendMessage()}
                         className="flex-1 bg-white/5 border border-gold/10 rounded-xl py-2.5 px-4 text-white text-sm focus:outline-none focus:border-gold/40"

@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
-import { Package, MessageCircle, Clock, CheckCircle, XCircle, ChevronRight } from 'lucide-react';
+import { Package, MessageCircle, Clock, CheckCircle, Send, Paperclip, Image, Mic, FileText } from 'lucide-react';
 
 const statusMap: Record<string, { label: string; color: string }> = {
   pending: { label: 'Pendente', color: 'text-yellow-400' },
   in_progress: { label: 'Em Andamento', color: 'text-blue-400' },
   completed: { label: 'Concluído', color: 'text-green-400' },
+  delivered: { label: 'Entregue', color: 'text-emerald-400' },
   cancelled: { label: 'Cancelado', color: 'text-red-400' },
 };
 
@@ -15,15 +16,23 @@ export default function MyOrders() {
   const [chatOrder, setChatOrder] = useState<number | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [msgText, setMsgText] = useState('');
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     api.getOrders().then(setOrders).catch(console.error).finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   const openChat = async (orderId: number) => {
+    if (chatOrder === orderId) { setChatOrder(null); return; }
     setChatOrder(orderId);
-    const msgs = await api.getMessages(orderId);
-    setMessages(msgs);
+    setMessages(await api.getMessages(orderId));
   };
 
   const sendMessage = async () => {
@@ -31,6 +40,24 @@ export default function MyOrders() {
     const msgs = await api.sendMessage(chatOrder, msgText);
     setMessages(msgs);
     setMsgText('');
+  };
+
+  const sendFile = async (input: HTMLInputElement | null, type: string) => {
+    if (!input || !input.files?.length || !chatOrder) return;
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const dataUrl = e.target?.result as string;
+      const msgs = await api.sendMessage(chatOrder, file.name, type, dataUrl, file.type);
+      setMessages(msgs);
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  };
+
+  const confirmDelivery = async (id: number) => {
+    await api.confirmDelivery(id);
+    api.getOrders().then(setOrders);
   };
 
   if (loading) return (
@@ -63,21 +90,41 @@ export default function MyOrders() {
                       <div className="text-white font-semibold">{order.name}</div>
                       <div className="text-gray-500 text-sm">Empresa: {order.company || 'N/A'}</div>
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-semibold ${statusMap[order.status]?.color} bg-white/5`}>
-                      {statusMap[order.status]?.label}
+                    <div className="flex items-center gap-2">
+                      <div className={`px-3 py-1 rounded-full text-xs font-semibold ${statusMap[order.status]?.color} bg-white/5`}>
+                        {statusMap[order.status]?.label}
+                      </div>
+                      {order.delivered_at && !order.delivery_confirmed_at && (
+                        <button onClick={() => confirmDelivery(order.id)}
+                          className="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-lg text-xs font-semibold border border-emerald-500/20 hover:bg-emerald-500/20 transition-all">
+                          Confirmar Recebimento
+                        </button>
+                      )}
+                      {order.delivery_confirmed_at && (
+                        <span className="text-[10px] text-green-400 flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3" /> Recebido
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                     <div className="text-gray-500">Tipo: <span className="text-white">{order.type === 'site' ? 'Site' : order.type === 'app_mobile' ? 'App Mobile' : 'App Desktop'}</span></div>
                     <div className="text-gray-500">Telefone: <span className="text-white">{order.phone}</span></div>
                     <div className="text-gray-500">Entrega: <span className="text-white">{order.deliveryTime}</span></div>
+                    {order.delivered_at && (
+                      <div className="text-gray-500">Entregue em: <span className="text-emerald-400">{new Date(order.delivered_at).toLocaleDateString('pt-BR')}</span></div>
+                    )}
                   </div>
                   <p className="text-gray-400 text-sm mb-3">{order.description}</p>
                   <div className="flex items-center gap-2">
                     <button onClick={() => openChat(order.id)}
-                      className="flex items-center gap-1.5 px-4 py-2 border border-gold/30 rounded-lg text-gold text-sm hover:bg-gold/10 transition-all">
+                      className={`flex items-center gap-1.5 px-4 py-2 border rounded-lg text-sm transition-all ${
+                        chatOrder === order.id
+                          ? 'bg-gold text-black border-gold'
+                          : 'border-gold/30 text-gold hover:bg-gold/10'
+                      }`}>
                       <MessageCircle className="w-4 h-4" />
-                      Chat
+                      {chatOrder === order.id ? 'Fechar' : 'Chat'}
                     </button>
                     <span className="text-[10px] text-gray-600">
                       <Clock className="w-3 h-3 inline mr-1" />
@@ -99,12 +146,39 @@ export default function MyOrders() {
                             <div className="text-[10px] text-gray-500 mb-1">
                               {msg.isAdmin ? 'Admin' : 'Você'} - {new Date(msg.createdAt).toLocaleTimeString('pt-BR')}
                             </div>
-                            {msg.text}
+                            {msg.type === 'image' && msg.file_data ? (
+                              <img src={msg.file_data} alt={msg.text} className="max-w-full rounded-lg max-h-48 cursor-pointer" onClick={() => window.open(msg.file_data, '_blank')} />
+                            ) : msg.type === 'audio' && msg.file_data ? (
+                              <audio controls className="w-full max-w-xs">
+                                <source src={msg.file_data} type={msg.file_type || 'audio/mpeg'} />
+                              </audio>
+                            ) : msg.type === 'file' && msg.file_data ? (
+                              <a href={msg.file_data} download={msg.text} className="flex items-center gap-2 text-gold underline">
+                                <FileText className="w-4 h-4" /> {msg.text}
+                              </a>
+                            ) : (
+                              msg.text
+                            )}
                           </div>
                         </div>
                       ))}
+                      <div ref={chatEndRef} />
                     </div>
                     <div className="flex gap-2 p-4 border-t border-gold/10">
+                      <input type="file" ref={fileInputRef} className="hidden" onChange={() => sendFile(fileInputRef.current, 'file')} />
+                      <input type="file" accept="image/*" ref={imageInputRef} className="hidden" onChange={() => sendFile(imageInputRef.current, 'image')} />
+                      <input type="file" accept="audio/*" ref={audioInputRef} className="hidden" onChange={() => sendFile(audioInputRef.current, 'audio')} />
+                      <div className="flex gap-1">
+                        <button onClick={() => imageInputRef.current?.click()} className="p-2.5 bg-white/5 border border-gold/10 rounded-xl text-gold hover:bg-gold/10 transition-all" title="Enviar imagem">
+                          <Image className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => audioInputRef.current?.click()} className="p-2.5 bg-white/5 border border-gold/10 rounded-xl text-gold hover:bg-gold/10 transition-all" title="Enviar áudio">
+                          <Mic className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => fileInputRef.current?.click()} className="p-2.5 bg-white/5 border border-gold/10 rounded-xl text-gold hover:bg-gold/10 transition-all" title="Enviar arquivo">
+                          <Paperclip className="w-4 h-4" />
+                        </button>
+                      </div>
                       <input value={msgText} onChange={e => setMsgText(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && sendMessage()}
                         className="flex-1 bg-white/5 border border-gold/10 rounded-xl py-2.5 px-4 text-white text-sm focus:outline-none focus:border-gold/40"

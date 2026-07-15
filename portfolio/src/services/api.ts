@@ -37,9 +37,19 @@ export const api = {
   getAdminOrders: () => request('/admin/orders'),
   updateOrderStatus: (id: number, status: string) =>
     request(`/admin/orders/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+
+  deliverOrder: (id: number) =>
+    request(`/admin/orders/${id}/deliver`, { method: 'PUT' }),
+
+  confirmDelivery: (id: number) =>
+    request(`/orders/${id}/confirm-delivery`, { method: 'PUT' }),
+
   getAdminStats: () => request('/admin/stats'),
 
   getMessages: (orderId: number) => request(`/chat/${orderId}`),
-  sendMessage: (orderId: number, text: string) =>
-    request(`/chat/${orderId}`, { method: 'POST', body: JSON.stringify({ text }) }),
+  sendMessage: (orderId: number, text: string, type = 'text', fileData: string | null = null, fileType: string | null = null) =>
+    request(`/chat/${orderId}`, {
+      method: 'POST',
+      body: JSON.stringify({ text, type, file_data: fileData, file_type: fileType }),
+    }),
 };

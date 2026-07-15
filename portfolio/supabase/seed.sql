@@ -28,7 +28,9 @@ CREATE TABLE IF NOT EXISTS orders (
   features TEXT,
   value DECIMAL(10,2) DEFAULT 0,
   status TEXT DEFAULT 'pending',
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  delivered_at TIMESTAMPTZ,
+  delivery_confirmed_at TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS messages (
@@ -37,7 +39,10 @@ CREATE TABLE IF NOT EXISTS messages (
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   text TEXT NOT NULL,
   is_admin BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  type TEXT DEFAULT 'text',
+  file_data TEXT,
+  file_type TEXT
 );
 
 -- MERCADO APP: orders (supermercado)
