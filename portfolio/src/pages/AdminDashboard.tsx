@@ -44,21 +44,23 @@ export default function AdminDashboard() {
     return () => window.removeEventListener('keydown', handleKey);
   }, []);
 
-  const loadStats = () => { setLoading(true); api.getAdminStats()
-    .then((res) => {
-      if (!res || typeof res !== 'object') { setError('Resposta inválida da API'); return; }
-      setData(res);
-      setError('');
-    })
-    .catch((err) => {
-      console.error(err);
-      setError(err.message || 'Erro ao carregar dados');
-    })
-    .finally(() => setLoading(false));
+  const loadStats = () => { api.getAdminStats()
+    .then((res) => { if (res && typeof res === 'object') { setData(res); setError(''); } })
+    .catch((err) => console.error(err));
   };
 
   useEffect(() => {
-    loadStats();
+    api.getAdminStats()
+      .then((res) => {
+        if (!res || typeof res !== 'object') { setError('Resposta inválida da API'); return; }
+        setData(res);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError(err.message || 'Erro ao carregar dados');
+      })
+      .finally(() => setLoading(false));
+
     const interval = setInterval(loadStats, 6000);
     return () => clearInterval(interval);
   }, []);
