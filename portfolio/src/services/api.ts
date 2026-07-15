@@ -8,7 +8,8 @@ async function request(path: string, options: RequestInit = {}) {
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API}${path}`, { ...options, headers });
+  const cacheBuster = options.method && options.method !== 'GET' ? '' : '?t=' + Date.now();
+  const res = await fetch(`${API}${path}${cacheBuster}`, { ...options, headers });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Erro na requisição');
   return data;
