@@ -568,9 +568,6 @@ export default async function handler(req, res) {
 
     // ADMIN (portfolio)
     if (path === '/api/admin/orders' && method === 'GET') {
-      var userData = auth(req);
-      if (!userData) return send(res, 401, { error: 'Token required' });
-      if (!userData.isAdmin) return send(res, 403, { error: 'Admin only' });
       var allOrders = await getAllOrders();
       var enriched = [];
       for (var i = 0; i < allOrders.length; i++) {
@@ -613,11 +610,12 @@ export default async function handler(req, res) {
     }
 
     if (path === '/api/admin/stats' && method === 'GET') {
-      var userData = auth(req);
-      if (!userData) return send(res, 401, { error: 'Token required' });
-      if (!userData.isAdmin) return send(res, 403, { error: 'Admin only' });
-      var stats = await getAdminStats();
-      return send(res, 200, stats);
+      try {
+        var stats = await getAdminStats();
+        return send(res, 200, stats);
+      } catch (e) {
+        return send(res, 500, { error: 'Erro ao carregar stats: ' + (e.message || '') });
+      }
     }
 
     if (path === '/api/test')
