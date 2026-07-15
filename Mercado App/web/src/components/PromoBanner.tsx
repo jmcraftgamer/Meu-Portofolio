@@ -65,10 +65,10 @@ export default function PromoBanner({ products }: Props) {
                       <div key={idx} className="min-w-full flex items-center gap-4 p-3">
                         <div className="w-24 h-24 bg-white/20 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0">
                           <img
-                            src={promo.image ? `${base}${promo.image.replace(/^\//, '')}` : `${base}images/arroz.jpg`}
+                            src={promo.image ? `${base}${promo.image.replace(/^\//, '')}` : `${base}images/arroz.png`}
                             alt={promo.name}
                             className="w-full h-full object-contain"
-                            onError={(e) => { (e.target as HTMLImageElement).src = `${base}images/arroz.jpg`; }}
+                            onError={(e) => { (e.target as HTMLImageElement).src = `${base}images/arroz.png`; }}
                           />
                         </div>
                         <div className="flex-1 min-w-0">

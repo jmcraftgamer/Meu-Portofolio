@@ -38,10 +38,10 @@ export default function Cart() {
             <div key={item.product.id} className="bg-white rounded-lg shadow-md p-4 flex items-center gap-4">
               <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
                 <img
-                  src={item.product.image ? `${cartBase}${item.product.image.replace(/^\//, '')}` : `${cartBase}images/arroz.jpg`}
+                  src={item.product.image ? `${cartBase}${item.product.image.replace(/^\//, '')}` : `${cartBase}images/arroz.png`}
                   alt={item.product.name}
                   className="w-full h-full object-contain"
-                  onError={(e) => { (e.target as HTMLImageElement).src = `${cartBase}images/arroz.jpg`; }}
+                  onError={(e) => { (e.target as HTMLImageElement).src = `${cartBase}images/arroz.png`; }}
                 />
               </div>
               <div className="flex-1 min-w-0">

@@ -185,10 +185,10 @@ export default function AdminProducts() {
             <div key={product.id} className="bg-white rounded-lg shadow-md p-4 flex gap-4">
               <div className="w-20 h-20 bg-gray-100 rounded flex-shrink-0 flex items-center justify-center overflow-hidden">
                 <img
-                  src={product.image ? `${adminBase}${product.image.replace(/^\//, '')}` : `${adminBase}images/arroz.jpg`}
+                  src={product.image ? `${adminBase}${product.image.replace(/^\//, '')}` : `${adminBase}images/arroz.png`}
                   alt={product.name}
                   className="w-full h-full object-contain"
-                  onError={(e) => { (e.target as HTMLImageElement).src = `${adminBase}images/arroz.jpg`; }}
+                  onError={(e) => { (e.target as HTMLImageElement).src = `${adminBase}images/arroz.png`; }}
                 />
               </div>
               <div className="flex-1 min-w-0">
