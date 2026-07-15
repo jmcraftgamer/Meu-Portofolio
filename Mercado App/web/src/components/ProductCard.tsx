@@ -21,10 +21,7 @@ export default function ProductCard({ product }: Props) {
     setTimeout(() => setAdded(false), 1500);
   };
 
-  const base = import.meta.env.BASE_URL;
-  const imgSrc = product.image
-    ? `${base}${product.image.replace(/^\//, '')}`
-    : `${base}images/arroz.png`;
+  const imgSrc = product.image || '/images/arroz.png';
 
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col group">
@@ -34,7 +31,7 @@ export default function ProductCard({ product }: Props) {
           alt={product.name}
           className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = `${base}images/arroz.png`;
+            (e.target as HTMLImageElement).src = '/images/arroz.png';
           }}
         />
         {product.is_promotion && (

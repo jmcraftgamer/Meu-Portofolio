@@ -8,8 +8,6 @@ interface Props {
   loading?: boolean;
 }
 
-const base = import.meta.env.BASE_URL;
-
 export default function ProductRow({ title, products, loading }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { addItem } = useCart();
@@ -86,10 +84,10 @@ export default function ProductRow({ title, products, loading }: Props) {
             >
               <div className="h-36 bg-gray-50 relative overflow-hidden">
                 <img
-                  src={product.image ? `${base}${product.image.replace(/^\//, '')}` : `${base}images/arroz.png`}
+                  src={product.image || '/images/arroz.png'}
                   alt={product.name}
                   className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                  onError={(e) => { (e.target as HTMLImageElement).src = `${base}images/arroz.png`; }}
+                  onError={(e) => { (e.target as HTMLImageElement).src = '/images/arroz.png'; }}
                 />
                 {product.is_promotion && (
                   <span className="absolute top-2 left-2 bg-primary-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md">

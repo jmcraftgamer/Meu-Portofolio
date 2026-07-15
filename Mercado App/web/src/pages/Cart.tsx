@@ -1,8 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
-const cartBase = import.meta.env.BASE_URL;
-
 export default function Cart() {
   const { items, updateQuantity, removeItem, totalPrice } = useCart();
   const { user } = useAuth();
@@ -38,10 +36,10 @@ export default function Cart() {
             <div key={item.product.id} className="bg-white rounded-lg shadow-md p-4 flex items-center gap-4">
               <div className="w-16 h-16 bg-gray-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
                 <img
-                  src={item.product.image ? `${cartBase}${item.product.image.replace(/^\//, '')}` : `${cartBase}images/arroz.png`}
+                  src={item.product.image || '/images/arroz.png'}
                   alt={item.product.name}
                   className="w-full h-full object-contain"
-                  onError={(e) => { (e.target as HTMLImageElement).src = `${cartBase}images/arroz.png`; }}
+                  onError={(e) => { (e.target as HTMLImageElement).src = '/images/arroz.png'; }}
                 />
               </div>
               <div className="flex-1 min-w-0">
