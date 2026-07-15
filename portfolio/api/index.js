@@ -216,7 +216,7 @@ async function getOrders(userId) {
 }
 
 async function createOrder(userId, data) {
-  var vals = { site: 450, app_mobile: 650, app_desktop: 1200 };
+  var vals = { site: 700, app_mobile: 1100, app_desktop: 1500 };
   if (supabase) {
     var r = await supabase.from('orders').insert({ user_id: userId, type: data.type, description: data.description, name: data.name, phone: data.phone, company: data.company || '', delivery_time: data.deliveryTime, features: JSON.stringify(data.features || []), value: vals[data.type] || 0, status: 'pending' }).select().maybeSingle();
     if (r.data) return { id: r.data.id, userId: r.data.user_id, type: r.data.type, description: r.data.description, name: r.data.name, phone: r.data.phone, company: r.data.company || '', deliveryTime: r.data.delivery_time, features: r.data.features, value: r.data.value, status: r.data.status, createdAt: r.data.created_at, delivered_at: r.data.delivered_at, delivery_confirmed_at: r.data.delivery_confirmed_at };
@@ -306,42 +306,103 @@ async function createMessage(orderId, userId, text, isAdmin) {
 
 function computeStats(allOrders) {
   var totalOrders = allOrders.length;
-  var totalRevenue = allOrders.filter(function(o) { return o.status !== 'cancelled'; }).reduce(function(s, o) { return s + (o.value || 0); }, 0);
+  var deliveredOrders = allOrders.filter(function(o) { return o.delivered_at || o.status === 'delivered'; }).length;
   var pendingOrders = allOrders.filter(function(o) { return o.status === 'pending'; }).length;
-  var completedOrders = allOrders.filter(function(o) { return o.status === 'completed'; }).length;
-  var inProgressOrders = allOrders.filter(function(o) { return o.status === 'in_progress'; }).length;
+
+  var deliveredRevenue = allOrders.filter(function(o) { return o.delivered_at || o.status === 'delivered'; }).reduce(function(s, o) { return s + (o.value || 0); }, 0);
 
   var monthMap = {};
   var typeMap = {};
+  var hourMap = {};
   allOrders.forEach(function(o) {
     var m = o.createdAt ? o.createdAt.substring(0, 7) : 'unknown';
     monthMap[m] = (monthMap[m] || 0) + 1;
     var t = o.type || 'other';
     typeMap[t] = (typeMap[t] || 0) + 1;
+    if (o.createdAt) {
+      var h = new Date(o.createdAt).getHours();
+      var hourKey = h + ':00';
+      hourMap[hourKey] = (hourMap[hourKey] || 0) + 1;
+    }
   });
+
+  var now = new Date();
+  var currentMonth = now.toISOString().substring(0, 7);
+  var ordersThisMonth = allOrders.filter(function(o) { return o.createdAt && o.createdAt.substring(0, 7) === currentMonth; }).length;
+
   var ordersByMonth = Object.keys(monthMap).sort().map(function(m) {
     return { month: m, count: monthMap[m] };
   });
   var ordersByType = Object.keys(typeMap).map(function(t) {
     return { type: t, count: typeMap[t] };
   });
+  var ordersByHour = Object.keys(hourMap).sort().map(function(h) {
+    return { hour: h, count: hourMap[h] };
+  });
 
-  return { totalOrders: totalOrders, totalRevenue: totalRevenue, pendingOrders: pendingOrders, completedOrders: completedOrders, inProgressOrders: inProgressOrders, ordersByMonth: ordersByMonth, ordersByType: ordersByType };
+  var bestMonth = ordersByMonth.length > 0 ? ordersByMonth.reduce(function(a, b) { return a.count > b.count ? a : b; }) : null;
+
+  var revenueByType = { site: 0, app_mobile: 0, app_desktop: 0 };
+  allOrders.filter(function(o) { return o.status !== 'cancelled'; }).forEach(function(o) {
+    if (revenueByType[o.type] !== undefined) revenueByType[o.type] += o.value || 0;
+  });
+
+  var monthlyRevenueMap = {};
+  allOrders.filter(function(o) { return o.status !== 'cancelled'; }).forEach(function(o) {
+    var m = o.createdAt ? o.createdAt.substring(0, 7) : 'unknown';
+    monthlyRevenueMap[m] = (monthlyRevenueMap[m] || 0) + (o.value || 0);
+  });
+  var revenueByMonth = Object.keys(monthlyRevenueMap).sort().map(function(m) {
+    return { month: m, revenue: monthlyRevenueMap[m] };
+  });
+
+  return {
+    totalOrders: totalOrders,
+    deliveredOrders: deliveredOrders,
+    pendingOrders: pendingOrders,
+    deliveredRevenue: deliveredRevenue,
+    totalRevenue: allOrders.filter(function(o) { return o.status !== 'cancelled'; }).reduce(function(s, o) { return s + (o.value || 0); }, 0),
+    ordersThisMonth: ordersThisMonth,
+    bestMonth: bestMonth,
+    ordersByMonth: ordersByMonth,
+    ordersByType: ordersByType,
+    ordersByHour: ordersByHour,
+    revenueByType: revenueByType,
+    revenueByMonth: revenueByMonth
+  };
 }
 
 async function getAdminStats() {
+  var allUsers = [];
   if (supabase) {
     try {
-      var r = await supabase.from('orders').select('*');
+      var uRes = await supabase.from('users').select('*');
+      if (uRes.data) allUsers = uRes.data;
+    } catch (e) {}
+  }
+  var userMap = {};
+  allUsers.forEach(function(u) { userMap[u.id] = u.name || u.email; });
+  memUsers.forEach(function(u) { userMap[u.id] = u.name || u.email; });
+
+  if (supabase) {
+    try {
+      var r = await supabase.from('orders').select('*').order('created_at', { ascending: false });
       if (r.data) {
         var mapped = r.data.map(function(o) {
-          return { id: o.id, userId: o.user_id, type: o.type, value: o.value, status: o.status, createdAt: o.created_at };
+          return { id: o.id, userId: o.user_id, type: o.type, value: o.value, status: o.status, createdAt: o.created_at, name: o.name, phone: o.phone, company: o.company || '', description: o.description, deliveryTime: o.delivery_time, delivered_at: o.delivered_at, delivery_confirmed_at: o.delivery_confirmed_at, userName: userMap[o.user_id] || '' };
         });
-        return computeStats(mapped);
+        var stats = computeStats(mapped);
+        stats.orders = mapped;
+        return stats;
       }
     } catch (e) { console.error(e); }
   }
-  return computeStats(memOrders);
+  var memOrdersWithUser = memOrders.map(function(o) {
+    return Object.assign({}, o, { userName: userMap[o.userId] || '' });
+  });
+  var stats = computeStats(memOrdersWithUser);
+  stats.orders = memOrdersWithUser;
+  return stats;
 }
 
 export default async function handler(req, res) {
